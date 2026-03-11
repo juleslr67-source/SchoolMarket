@@ -237,29 +237,26 @@ export default function SchoolMarket() {
     setView("markets");
   };
 
-  // ── PARIER (admin peut aussi parier) ────────────────────────────
+  // ── PARIER ──────────────────────────────────────────────────────
   const placeBet = () => {
     if (!me || !betModal || !betSide) return;
     const amount = parseInt(betAmount);
     if (!amount || amount<10) return showToast("Mise min : 10 SC","err");
-    const cur    = usersRef.current;
+    const cur     = usersRef.current;
     const freshMe = cur.find(u=>u.id===me.id)||me;
-    if (!isAdmin && freshMe.wallet<amount) return showToast("Pas assez de SchoolCoins 😢","err");
+    if (freshMe.wallet<amount) return showToast("Pas assez de SchoolCoins 😢","err");
     const mkt = marketsRef.current.find(m=>m.id===betModal.id);
     if (!mkt||mkt.resolved) return showToast("Marché déjà résolu.","err");
     if ((mkt.bets||[]).find(b=>b.userId===me.id)) return showToast("Tu as déjà parié ici !","err");
-    // Admin ne peut pas parier sur ses propres marchés
-    if (mkt.creatorId===me.id && !isAdmin) return showToast("Tu ne peux pas parier sur ton propre marché.","err");
+    if (mkt.creatorId===me.id) return showToast("Tu ne peux pas parier sur ton propre marché.","err");
     const newMkt = {...mkt, bets:[...(mkt.bets||[]),
       {userId:me.id,pseudo:me.pseudo,avatar:me.avatar,side:betSide,amount,at:Date.now()}]};
     saveM(marketsRef.current.map(m=>m.id===mkt.id?newMkt:m));
-    if (!isAdmin) {
-      const newMe = {...freshMe, wallet:freshMe.wallet-amount};
-      saveU(cur.map(u=>u.id===me.id?newMe:u));
-      setMe(newMe);
-    }
+    const newMe = {...freshMe, wallet:freshMe.wallet-amount};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
     setBetModal(null); setBetSide(null);
-    showToast(`✅ ${amount} SC sur "${betSide==="yes"?"OUI":"NON"}"`);
+    showToast(`✅ ${amount} SC misés sur "${betSide==="yes"?"OUI":"NON"}"`);
   };
 
   // ── CRÉER MARCHÉ ────────────────────────────────────────────────
@@ -296,20 +293,29 @@ export default function SchoolMarket() {
     showToast("🗑 Marché supprimé — paris remboursés.");
   };
 
-  // ── RETIRER PARI ────────────────────────────────────────────────
+  // ── RETIRER PARI (pénalité 50%) ─────────────────────────────────
   const deleteBet = (marketId) => {
     const mkt = marketsRef.current.find(m=>m.id===marketId);
     if (!mkt||mkt.resolved) return showToast("Impossible : marché résolu.","err");
     const myBet = (mkt.bets||[]).find(b=>b.userId===me.id);
     if (!myBet) return;
-    saveM(marketsRef.current.map(m=>m.id===marketId?{...mkt,bets:mkt.bets.filter(b=>b.userId!==me.id)}:m));
-    if (!isAdmin) {
-      const newMe = {...me, wallet:me.wallet+myBet.amount};
-      saveU(usersRef.current.map(u=>u.id===me.id?newMe:u));
-      setMe(newMe);
-    }
+    const penalty   = Math.floor(myBet.amount * 0.5); // 50% perdu
+    const refund    = myBet.amount - penalty;          // 50% remboursé
+    // Le pari est retiré mais la pénalité reste dans le marché comme mise fantôme
+    // (elle sera distribuée aux gagnants à la clôture)
+    const penaltyBet = {
+      userId:`penalty_${me.id}_${Date.now()}`,
+      pseudo:"[cagnotte]", avatar:"💰",
+      side: myBet.side, // même camp → gonfle les cotes adverses
+      amount: penalty, at: Date.now(), isPenalty: true
+    };
+    const newBets = [...mkt.bets.filter(b=>b.userId!==me.id), penaltyBet];
+    saveM(marketsRef.current.map(m=>m.id===marketId?{...mkt,bets:newBets}:m));
+    const newMe = {...me, wallet:me.wallet+refund};
+    saveU(usersRef.current.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
     setDelConfirm(null);
-    showToast(`↩ Pari annulé — ${myBet.amount} SC remboursés.`);
+    showToast(`↩ Pari retiré — ${refund} SC remboursés, ${penalty} SC en pénalité.`);
   };
 
   // ── ADMIN : CLÔTURER ────────────────────────────────────────────
@@ -1305,7 +1311,7 @@ export default function SchoolMarket() {
               ))}
             </div>
             {!isAdmin && <div style={{fontSize:9,color:"#333",marginBottom:16}}>Solde : {me?.wallet?.toLocaleString()} SC</div>}
-            {isAdmin && <div style={{fontSize:9,color:"#a855f7",marginBottom:16}}>Mode admin — pari sans déduction de SC</div>}
+            {isAdmin && <div style={{fontSize:9,color:"#a855f7",marginBottom:16}}>Solde admin : {me?.wallet?.toLocaleString()} SC 👑</div>}
             <button onClick={placeBet} disabled={!betSide} style={{...S.btn(
               betSide?"#ffdc32":"#1a1a1a", betSide?"#0d0d0d":"#444",
               {cursor:betSide?"pointer":"not-allowed"})}}>
@@ -1383,15 +1389,23 @@ export default function SchoolMarket() {
               <>
                 <div style={{fontSize:28,marginBottom:10}}>↩</div>
                 <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>Retirer ton pari ?</div>
-                <div style={{fontSize:13,color:"#888",marginBottom:8,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
-                {(()=>{const b=(delConfirm.market.bets||[]).find(x=>x.userId===me?.id); return (
-                  <div style={{fontSize:11,color:"#555",marginBottom:22,padding:"10px 12px",
-                    background:"#1a1a1a",borderRadius:2,lineHeight:1.6}}>
-                    {b?.amount} SC remboursés intégralement.</div>
-                );})()}
+                <div style={{fontSize:13,color:"#888",marginBottom:12,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
+                {(()=>{
+                  const b=(delConfirm.market.bets||[]).find(x=>x.userId===me?.id);
+                  const penalty = b ? Math.floor(b.amount*0.5) : 0;
+                  const refund  = b ? b.amount - penalty : 0;
+                  return (
+                    <div style={{marginBottom:22,padding:"12px 14px",background:"#1a1a1a",borderRadius:2,border:"1px solid #252525",lineHeight:2}}>
+                      <div style={{fontSize:11,color:"#555"}}>Mise initiale : <span style={{color:"#e8e0d0",fontWeight:"bold"}}>{b?.amount} SC</span></div>
+                      <div style={{fontSize:11,color:"#10b981"}}>✅ Remboursé : <span style={{fontWeight:"bold"}}>{refund} SC</span></div>
+                      <div style={{fontSize:11,color:"#ef4444"}}>🔥 Pénalité (50%) : <span style={{fontWeight:"bold"}}>−{penalty} SC → cagnotte</span></div>
+                      <div style={{fontSize:10,color:"#444",marginTop:4}}>La pénalité est distribuée aux gagnants à la clôture.</div>
+                    </div>
+                  );
+                })()}
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>setDelConfirm(null)} style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>← GARDER</button>
-                  <button onClick={()=>deleteBet(delConfirm.market.id)} style={{...S.btn("#ef4444","#fff",{flex:1})}}>↩ RETIRER</button>
+                  <button onClick={()=>deleteBet(delConfirm.market.id)} style={{...S.btn("#ef4444","#fff",{flex:1})}}>↩ RETIRER (−50%)</button>
                 </div>
               </>
             )}
