@@ -227,7 +227,7 @@ export default function SchoolMarket() {
     const cur = usersRef.current;
     let adm = cur.find(u=>u.pseudo===ADMIN_PSEUDO);
     if (!adm) {
-      adm = { id:"admin_root", pseudo:ADMIN_PSEUDO, avatar:"👑", wallet:999999,
+      adm = { id:"admin_root", pseudo:ADMIN_PSEUDO, avatar:"👑", wallet:1000,
                passwordHash:"", banned:false, isAdmin:true, canRename:false, renameRequest:null };
       saveU([...cur, adm]);
     }
@@ -282,15 +282,18 @@ export default function SchoolMarket() {
     const mkt = marketsRef.current.find(m=>m.id===marketId);
     if (!mkt) return;
     let newU = [...usersRef.current];
-    for (const bet of (mkt.bets||[])) {
-      newU = newU.map(u=>u.id===bet.userId?{...u,wallet:u.wallet+bet.amount}:u);
+    // Rembourse uniquement si le marché n'est pas encore résolu
+    if (!mkt.resolved) {
+      for (const bet of (mkt.bets||[]).filter(b=>!b.isPenalty)) {
+        newU = newU.map(u=>u.id===bet.userId?{...u,wallet:u.wallet+bet.amount}:u);
+      }
+      saveU(newU);
+      const fm = newU.find(u=>u.id===me?.id);
+      if (fm) setMe(fm);
     }
-    saveU(newU);
     saveM(marketsRef.current.filter(m=>m.id!==marketId));
-    const fm = newU.find(u=>u.id===me?.id);
-    if (fm) setMe(fm);
     setDelConfirm(null);
-    showToast("🗑 Marché supprimé — paris remboursés.");
+    showToast(mkt.resolved?"🗑 Marché résolu supprimé.":"🗑 Marché supprimé — paris remboursés.");
   };
 
   // ── RETIRER PARI (pénalité 50%) ─────────────────────────────────
@@ -447,7 +450,9 @@ export default function SchoolMarket() {
 
   // ── DÉRIVÉS ─────────────────────────────────────────────────────
   const visibleUsers = users.filter(u=>u.pseudo!==ADMIN_PSEUDO);
-  const leaderboard  = visibleUsers.map(u=>{
+  // Leaderboard inclut l'admin
+  const leaderboardUsers = users.filter(u=>!u.banned);
+  const leaderboard  = leaderboardUsers.map(u=>{
     const s=computeStats(u.id,markets);
     const t=s.wins+s.losses;
     return{...u,...s,winRate:t>0?Math.round(s.wins/t*100):0,profit:u.wallet-1000};
@@ -883,6 +888,13 @@ export default function SchoolMarket() {
                           borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit",fontWeight:"bold",letterSpacing:1}}>
                         👑 CLÔTURER CE MARCHÉ</button>
                     )}
+                    {isAdmin&&mkt.resolved&&(
+                      <button onClick={e=>{e.stopPropagation();setDelConfirm({type:"market",market:mkt});}}
+                        style={{marginTop:8,width:"100%",background:"#ef444410",
+                          border:"1px solid #ef444425",color:"#ef4444",padding:"6px",
+                          borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit",fontWeight:"bold",letterSpacing:1}}>
+                        🗑 SUPPRIMER CE MARCHÉ RÉSOLU</button>
+                    )}
                   </div>
                 );
               })}
@@ -923,7 +935,10 @@ export default function SchoolMarket() {
                         onMouseLeave={e=>e.currentTarget.style.borderColor=`${colors[i]}22`}
                         onClick={()=>{setProfileUser(u);setView("profile");}}>
                         <div style={{fontSize:24,marginBottom:3}}>{u.avatar}</div>
-                        <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.pseudo}</div>
+                        <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {u.pseudo}
+                          {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",marginLeft:4}}>ADMIN</span>}
+                        </div>
                         <div style={{fontSize:20,fontWeight:"bold",color:colors[i]}}>{medals[i]}</div>
                         <div style={{fontSize:10,color:"#444",marginTop:3}}>{u.profit>=0?"+":""}{u.profit.toLocaleString()} SC</div>
                       </div>
@@ -956,6 +971,7 @@ export default function SchoolMarket() {
                         <span style={{fontSize:16}}>{u.avatar}</span>
                         <span style={{fontSize:12,color:isMe?"#ffdc32":"#ccc",fontWeight:isMe?"bold":"normal"}}>
                           {u.pseudo}{isMe?" (toi)":""}
+                          {u.isAdmin&&<span style={{marginLeft:6,fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:2}}>ADMIN</span>}
                           {u.banned&&<span style={{marginLeft:6,fontSize:8,color:"#ef4444"}}>BANNI</span>}
                         </span>
                       </div>
@@ -1375,11 +1391,16 @@ export default function SchoolMarket() {
             {delConfirm.type==="market" ? (
               <>
                 <div style={{fontSize:28,marginBottom:10}}>🗑</div>
-                <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>Supprimer ce marché ?</div>
+                <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>
+                  {delConfirm.market.resolved?"Supprimer ce marché résolu ?":"Supprimer ce marché ?"}
+                </div>
                 <div style={{fontSize:13,color:"#888",marginBottom:8,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
                 <div style={{fontSize:11,color:"#555",marginBottom:22,lineHeight:1.6,
                   padding:"10px 12px",background:"#1a1a1a",borderRadius:2}}>
-                  ⚠️ Les {(delConfirm.market.bets||[]).length} paris seront remboursés.</div>
+                  {delConfirm.market.resolved
+                    ? "ℹ️ Ce marché est déjà résolu, les gains ont été distribués. La suppression est définitive, sans remboursement."
+                    : `⚠️ Les ${(delConfirm.market.bets||[]).filter(b=>!b.isPenalty).length} paris actifs seront remboursés.`}
+                </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>setDelConfirm(null)} style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>← ANNULER</button>
                   <button onClick={()=>deleteMarket(delConfirm.market.id)} style={{...S.btn("#ef4444","#fff",{flex:1})}}>🗑 SUPPRIMER</button>
