@@ -19,6 +19,70 @@ const AVATARS   = ["🦁","🎯","🦈","⏰","🔮","🐺","🦊","🐸","🤖"
 const CAT_COLOR = { profs:"#f59e0b", eleves:"#ef4444", cours:"#3b82f6", "vie scolaire":"#10b981" };
 const EMOJIS    = ["🎲","🕐","⚠️","📚","😱","🍟","📢","🎉","💀","🏃","🤡","😴","🎓","📝","🏆","😤","🤔","💥","🫠","🤝"];
 
+// ══════════════════════════════════════════════════════════════════
+// CATALOGUE BOUTIQUE
+// ══════════════════════════════════════════════════════════════════
+const SHOP_ITEMS = [
+  // ── COULEURS DE PSEUDO ──────────────────────────────────────────
+  { id:"color_gold",    type:"pseudoColor", name:"Pseudo Doré",      desc:"Ton pseudo brille en or",          price:300,  icon:"✨", color:"#ffd700", rarity:"rare" },
+  { id:"color_red",     type:"pseudoColor", name:"Pseudo Écarlate",  desc:"Ton pseudo en rouge sang",          price:150,  icon:"🔴", color:"#ef4444", rarity:"commun" },
+  { id:"color_cyan",    type:"pseudoColor", name:"Pseudo Cyan",      desc:"Ton pseudo en bleu électrique",     price:150,  icon:"🔵", color:"#22d3ee", rarity:"commun" },
+  { id:"color_green",   type:"pseudoColor", name:"Pseudo Vert Néon", desc:"Ton pseudo en vert fluo",           price:150,  icon:"💚", color:"#4ade80", rarity:"commun" },
+  { id:"color_purple",  type:"pseudoColor", name:"Pseudo Violet",    desc:"Ton pseudo en violet royal",        price:200,  icon:"💜", color:"#a855f7", rarity:"rare" },
+  { id:"color_orange",  type:"pseudoColor", name:"Pseudo Orange",    desc:"Ton pseudo en orange flamme",       price:200,  icon:"🟠", color:"#f97316", rarity:"rare" },
+  { id:"color_rainbow", type:"pseudoColor", name:"Pseudo Arc-en-ciel","desc":"Ton pseudo change de couleur",   price:1500, icon:"🌈", color:"rainbow",  rarity:"légendaire" },
+
+  // ── BADGES (titre affiché sous le pseudo) ──────────────────────
+  { id:"badge_shark",   type:"badge", name:"🦈 Le Shark",      desc:"Pour les prédateurs du marché",     price:500,  icon:"🦈", rarity:"rare" },
+  { id:"badge_prophet", type:"badge", name:"🔮 Le Prophète",   desc:"Tes prédictions sont divines",      price:500,  icon:"🔮", rarity:"rare" },
+  { id:"badge_legend",  type:"badge", name:"👑 La Légende",    desc:"Statut de légende du lycée",        price:2000, icon:"👑", rarity:"légendaire" },
+  { id:"badge_noob",    type:"badge", name:"🐣 Le Noob",       desc:"Assumé et fier de l'être",          price:50,   icon:"🐣", rarity:"commun" },
+  { id:"badge_ghost",   type:"badge", name:"👻 Le Fantôme",    desc:"Mystérieux et insaisissable",       price:300,  icon:"👻", rarity:"rare" },
+  { id:"badge_degen",   type:"badge", name:"🎰 Le Dégénéré",   desc:"Tu miseras jusqu'au bout",          price:400,  icon:"🎰", rarity:"rare" },
+  { id:"badge_analyst", type:"badge", name:"📊 L'Analyste",    desc:"Les stats ne te cachent rien",      price:600,  icon:"📊", rarity:"épique" },
+  { id:"badge_god",     type:"badge", name:"⚡ Le Dieu",        desc:"Au sommet de tout",                 price:3000, icon:"⚡", rarity:"légendaire" },
+
+  // ── CADRES DE CARTE ─────────────────────────────────────────────
+  { id:"frame_fire",    type:"frame", name:"Cadre Feu",         desc:"Bordure de flammes rouges",         price:400,  icon:"🔥", frameColor:"linear-gradient(135deg,#ef4444,#f97316)", rarity:"rare" },
+  { id:"frame_ice",     type:"frame", name:"Cadre Glace",       desc:"Bordure cristal bleu glacé",        price:400,  icon:"❄️", frameColor:"linear-gradient(135deg,#22d3ee,#6366f1)", rarity:"rare" },
+  { id:"frame_gold",    type:"frame", name:"Cadre Or",          desc:"Bordure en or massif",              price:800,  icon:"🏅", frameColor:"linear-gradient(135deg,#ffd700,#f59e0b)", rarity:"épique" },
+  { id:"frame_galaxy",  type:"frame", name:"Cadre Galaxie",     desc:"L'univers autour de toi",           price:2500, icon:"🌌", frameColor:"linear-gradient(135deg,#a855f7,#ec4899,#6366f1)", rarity:"légendaire" },
+
+  // ── EMOJIS SUPPLÉMENTAIRES ──────────────────────────────────────
+  { id:"avatar_devil",  type:"avatar", name:"😈 Démon",          desc:"Débloquer l'avatar Démon",          price:300,  icon:"😈", rarity:"rare" },
+  { id:"avatar_crown",  type:"avatar", name:"🤴 Prince",          desc:"Débloquer l'avatar Prince",         price:300,  icon:"🤴", rarity:"rare" },
+  { id:"avatar_alien",  type:"avatar", name:"👽 Alien",           desc:"Débloquer l'avatar Alien",          price:500,  icon:"👽", rarity:"épique" },
+  { id:"avatar_ninja",  type:"avatar", name:"🥷 Ninja",           desc:"Débloquer l'avatar Ninja",          price:500,  icon:"🥷", rarity:"épique" },
+  { id:"avatar_clown",  type:"avatar", name:"🤡 Clown",           desc:"Débloquer l'avatar Clown",          price:100,  icon:"🤡", rarity:"commun" },
+  { id:"avatar_zombie", type:"avatar", name:"🧟 Zombie",          desc:"Débloquer l'avatar Zombie",         price:400,  icon:"🧟", rarity:"rare" },
+];
+
+const RARITY_COLOR = { commun:"#888", rare:"#3b82f6", épique:"#a855f7", légendaire:"#ffd700" };
+const RARITY_BG    = { commun:"#88888815", rare:"#3b82f615", épique:"#a855f715", légendaire:"#ffd70015" };
+
+function getRainbowColor(pseudo) {
+  const colors = ["#ef4444","#f97316","#ffd700","#4ade80","#22d3ee","#a855f7"];
+  return colors[Math.abs(pseudo.split("").reduce((a,c)=>a+c.charCodeAt(0),0)) % colors.length];
+}
+
+function getPseudoColor(user) {
+  if (!user?.equipped?.pseudoColor) return null;
+  const item = SHOP_ITEMS.find(i=>i.id===user.equipped.pseudoColor);
+  if (!item) return null;
+  if (item.color==="rainbow") return getRainbowColor(user.pseudo);
+  return item.color;
+}
+function getUserBadge(user) {
+  if (!user?.equipped?.badge) return null;
+  return SHOP_ITEMS.find(i=>i.id===user.equipped.badge);
+}
+function getUserFrame(user) {
+  if (!user?.equipped?.frame) return null;
+  return SHOP_ITEMS.find(i=>i.id===user.equipped.frame);
+}
+
+// ══════════════════════════════════════════════════════════════════
+
 let db = null;
 let firebaseOk = false;
 try {
@@ -176,7 +240,10 @@ export default function SchoolMarket() {
   const [myRenamInput,setMyRenamInput]= useState("");
   const [myRenamErr,  setMyRenamErr]  = useState("");
 
-  const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
+  // Boutique
+  const [shopFilter,  setShopFilter]  = useState("tous");
+  const [equipModal,  setEquipModal]  = useState(null); // item acheté à équiper
+
 
   // ── AUTH ────────────────────────────────────────────────────────
   const handleRegister = () => {
@@ -448,6 +515,58 @@ export default function SchoolMarket() {
     else navigator.clipboard.writeText(url).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);}).catch(()=>{});
   };
 
+  // ── BOUTIQUE : ACHETER ──────────────────────────────────────────
+  const buyItem = (item) => {
+    const cur = usersRef.current;
+    const freshMe = cur.find(u=>u.id===me.id)||me;
+    if (freshMe.wallet < item.price) return showToast("Pas assez de SC 😢","err");
+    const owned = freshMe.owned || [];
+    if (owned.includes(item.id)) return showToast("Tu possèdes déjà cet article !","err");
+    const newMe = {...freshMe, wallet:freshMe.wallet-item.price, owned:[...owned, item.id]};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    showToast(`🎉 "${item.name}" acheté ! Va l'équiper.`);
+    setEquipModal(item);
+  };
+
+  // ── BOUTIQUE : ÉQUIPER ───────────────────────────────────────────
+  const equipItem = (item) => {
+    const cur = usersRef.current;
+    const freshMe = cur.find(u=>u.id===me.id)||me;
+    const equipped = {...(freshMe.equipped||{})};
+    if (item.type==="pseudoColor") equipped.pseudoColor = item.id;
+    if (item.type==="badge")       equipped.badge       = item.id;
+    if (item.type==="frame")       equipped.frame       = item.id;
+    if (item.type==="avatar") {
+      // Débloquer l'avatar + l'équiper
+      const newAvatars = [...(freshMe.unlockedAvatars||[])];
+      if (!newAvatars.includes(item.icon)) newAvatars.push(item.icon);
+      const newMe = {...freshMe, equipped, unlockedAvatars:newAvatars, avatar:item.icon};
+      saveU(cur.map(u=>u.id===me.id?newMe:u));
+      setMe(newMe);
+      setEquipModal(null);
+      showToast(`✅ Avatar "${item.icon}" équipé !`);
+      return;
+    }
+    const newMe = {...freshMe, equipped};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    setEquipModal(null);
+    showToast(`✅ "${item.name}" équipé !`);
+  };
+
+  // ── BOUTIQUE : DÉSÉQUIPER ────────────────────────────────────────
+  const unequipItem = (type) => {
+    const cur = usersRef.current;
+    const freshMe = cur.find(u=>u.id===me.id)||me;
+    const equipped = {...(freshMe.equipped||{})};
+    delete equipped[type];
+    const newMe = {...freshMe, equipped};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    showToast("❌ Article déséquipé.");
+  };
+
   // ── DÉRIVÉS ─────────────────────────────────────────────────────
   const visibleUsers = users.filter(u=>u.pseudo!==ADMIN_PSEUDO);
   // Leaderboard inclut l'admin
@@ -502,7 +621,7 @@ export default function SchoolMarket() {
         </div>
 
         <nav style={{display:"flex",gap:3}}>
-          {[["markets","📊 Marchés"],["leaderboard","🏆 Classement"]].map(([v,lbl])=>(
+          {[["markets","📊 Marchés"],["leaderboard","🏆 Classement"],["shop","🛒 Boutique"]].map(([v,lbl])=>(
             <button key={v} onClick={()=>setView(v)} style={{
               background:view===v?"#ffdc3215":"transparent",color:view===v?"#ffdc32":"#555",
               border:view===v?"1px solid #ffdc3230":"1px solid transparent",
@@ -957,28 +1076,41 @@ export default function SchoolMarket() {
                 {leaderboard.map((u,i)=>{
                   const rc={0:"#ffdc32",1:"#94a3b8",2:"#cd7c2f"};
                   const isMe=me?.id===u.id;
+                  const pColor=getPseudoColor(u);
+                  const badge=getUserBadge(u);
+                  const frame=getUserFrame(u);
                   return (
                     <div key={u.id} style={{display:"grid",gridTemplateColumns:"44px 1fr 60px 60px 60px 80px",
                       padding:"11px 16px",borderBottom:"1px solid #111",
                       background:isMe?"#ffdc3206":"transparent",
-                      borderLeft:isMe?"3px solid #ffdc32":"3px solid transparent",cursor:"pointer"}}
+                      borderLeft:isMe&&!frame?"3px solid #ffdc32":"3px solid transparent",
+                      cursor:"pointer",position:"relative",
+                      boxShadow:frame?`inset 0 0 0 2px transparent`:undefined}}
                       onMouseEnter={e=>e.currentTarget.style.background="#ffffff06"}
                       onMouseLeave={e=>e.currentTarget.style.background=isMe?"#ffdc3206":"transparent"}
                       onClick={()=>{setProfileUser(u);setView("profile");}}>
-                      <div style={{fontSize:12,fontWeight:"bold",color:rc[i]||"#444"}}>
+                      {frame&&<div style={{position:"absolute",inset:0,borderRadius:0,
+                        background:frame.frameColor,opacity:0.15,pointerEvents:"none",zIndex:0}}/>}
+                      <div style={{fontSize:12,fontWeight:"bold",color:rc[i]||"#444",position:"relative",zIndex:1}}>
                         {i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,position:"relative",zIndex:1}}>
                         <span style={{fontSize:16}}>{u.avatar}</span>
-                        <span style={{fontSize:12,color:isMe?"#ffdc32":"#ccc",fontWeight:isMe?"bold":"normal"}}>
-                          {u.pseudo}{isMe?" (toi)":""}
-                          {u.isAdmin&&<span style={{marginLeft:6,fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:2}}>ADMIN</span>}
-                          {u.banned&&<span style={{marginLeft:6,fontSize:8,color:"#ef4444"}}>BANNI</span>}
-                        </span>
+                        <div>
+                          <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                            <span style={{fontSize:12,color:pColor||(isMe?"#ffdc32":"#ccc"),fontWeight:"bold",
+                              textShadow:pColor?`0 0 10px ${pColor}55`:undefined}}>
+                              {u.pseudo}{isMe?" (toi)":""}
+                            </span>
+                            {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:2}}>ADMIN</span>}
+                            {u.banned&&<span style={{fontSize:8,color:"#ef4444"}}>BANNI</span>}
+                          </div>
+                          {badge&&<div style={{fontSize:9,color:RARITY_COLOR[badge.rarity],letterSpacing:1}}>{badge.name}</div>}
+                        </div>
                       </div>
-                      <div style={{textAlign:"right",color:"#10b981",fontSize:12,fontWeight:"bold"}}>{u.wins}</div>
-                      <div style={{textAlign:"right",color:"#ef4444",fontSize:12,fontWeight:"bold"}}>{u.losses}</div>
-                      <div style={{textAlign:"right",fontSize:11,fontWeight:"bold",color:u.winRate>=50?"#10b981":"#ef4444"}}>{u.winRate}%</div>
-                      <div style={{textAlign:"right",fontSize:12,fontWeight:"bold",color:u.profit>=0?"#10b981":"#ef4444"}}>
+                      <div style={{textAlign:"right",color:"#10b981",fontSize:12,fontWeight:"bold",position:"relative",zIndex:1}}>{u.wins}</div>
+                      <div style={{textAlign:"right",color:"#ef4444",fontSize:12,fontWeight:"bold",position:"relative",zIndex:1}}>{u.losses}</div>
+                      <div style={{textAlign:"right",fontSize:11,fontWeight:"bold",color:u.winRate>=50?"#10b981":"#ef4444",position:"relative",zIndex:1}}>{u.winRate}%</div>
+                      <div style={{textAlign:"right",fontSize:12,fontWeight:"bold",color:u.profit>=0?"#10b981":"#ef4444",position:"relative",zIndex:1}}>
                         {u.profit>=0?"+":""}{u.profit.toLocaleString()}</div>
                     </div>
                   );
@@ -986,6 +1118,160 @@ export default function SchoolMarket() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ══ BOUTIQUE ════════════════════════════════════════════ */}
+      {view==="shop" && (
+        <div style={{maxWidth:1000,margin:"0 auto",padding:"28px 20px",position:"relative",zIndex:1}}>
+          <div style={{marginBottom:6}}>
+            <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>DÉPENSE TES SCHOOLCOINS</div>
+            <div style={{fontSize:24,fontWeight:"bold"}}>🛒 Boutique</div>
+            <div style={{fontSize:11,color:"#444",marginTop:4}}>
+              Les cosmétiques s'affichent dans le classement et sur ton profil.
+            </div>
+          </div>
+
+          {/* Solde + items équipés */}
+          {me && (
+            <div style={{background:"#0f0f0f",border:"1px solid #ffdc3230",borderRadius:4,
+              padding:"14px 18px",marginBottom:20,marginTop:16,display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:8,color:"#555",letterSpacing:2,marginBottom:3}}>TON SOLDE</div>
+                <div style={{fontSize:22,fontWeight:"bold",color:"#ffdc32"}}>
+                  💰 {(usersRef.current.find(u=>u.id===me.id)||me).wallet.toLocaleString()} SC
+                </div>
+              </div>
+              <div style={{flex:1,display:"flex",gap:8,flexWrap:"wrap"}}>
+                {["pseudoColor","badge","frame"].map(type=>{
+                  const freshMe=usersRef.current.find(u=>u.id===me.id)||me;
+                  const eqId=freshMe.equipped?.[type];
+                  const eqItem=eqId?SHOP_ITEMS.find(i=>i.id===eqId):null;
+                  const labels={pseudoColor:"Couleur pseudo",badge:"Badge",frame:"Cadre"};
+                  return (
+                    <div key={type} style={{background:"#111",border:"1px solid #252525",borderRadius:3,padding:"8px 12px",minWidth:120}}>
+                      <div style={{fontSize:8,color:"#444",letterSpacing:2,marginBottom:4}}>{labels[type].toUpperCase()}</div>
+                      {eqItem ? (
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:14}}>{eqItem.icon}</span>
+                          <span style={{fontSize:10,color:RARITY_COLOR[eqItem.rarity]}}>{eqItem.name}</span>
+                          <button onClick={()=>unequipItem(type)} style={{marginLeft:"auto",background:"transparent",
+                            border:"none",color:"#444",cursor:"pointer",fontSize:11}}>✕</button>
+                        </div>
+                      ) : (
+                        <div style={{fontSize:10,color:"#333"}}>— Aucun</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Filtres */}
+          <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
+            {[["tous","Tout"],["pseudoColor","🎨 Couleurs"],["badge","🏷 Badges"],["frame","🖼 Cadres"],["avatar","😈 Avatars"]].map(([f,lbl])=>(
+              <button key={f} onClick={()=>setShopFilter(f)} style={{
+                background:shopFilter===f?"#ffdc32":"transparent",color:shopFilter===f?"#0d0d0d":"#555",
+                border:shopFilter===f?"none":"1px solid #252525",padding:"5px 14px",borderRadius:2,
+                cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit",letterSpacing:1}}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+
+          {/* Grille articles */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+            {SHOP_ITEMS.filter(item=>shopFilter==="tous"||item.type===shopFilter).map(item=>{
+              const freshMe = me ? (usersRef.current.find(u=>u.id===me.id)||me) : null;
+              const owned   = freshMe?.owned?.includes(item.id);
+              const equipped= freshMe?.equipped;
+              const isEquipped = equipped && Object.values(equipped).includes(item.id);
+              const canBuy  = me && !owned && freshMe.wallet>=item.price;
+              const tooExpensive = me && !owned && freshMe.wallet<item.price;
+              const rc = RARITY_COLOR[item.rarity];
+              const rb = RARITY_BG[item.rarity];
+              return (
+                <div key={item.id} style={{background:"#0f0f0f",border:`1px solid ${rc}33`,borderRadius:4,
+                  padding:16,display:"flex",flexDirection:"column",gap:8,
+                  opacity:tooExpensive?0.5:1,position:"relative",overflow:"hidden"}}>
+                  {/* Rarity glow */}
+                  <div style={{position:"absolute",inset:0,background:rb,pointerEvents:"none"}}/>
+                  <div style={{position:"relative",zIndex:1}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <span style={{fontSize:28}}>{item.icon}</span>
+                      <span style={{fontSize:8,fontWeight:"bold",letterSpacing:2,
+                        color:rc,background:`${rc}20`,padding:"2px 6px",borderRadius:2,textTransform:"uppercase"}}>
+                        {item.rarity}</span>
+                    </div>
+                    <div style={{fontSize:13,fontWeight:"bold",marginBottom:3}}>{item.name}</div>
+                    <div style={{fontSize:10,color:"#444",marginBottom:10,lineHeight:1.4}}>{item.desc}</div>
+                    {/* Aperçu */}
+                    {item.type==="pseudoColor"&&(
+                      <div style={{fontSize:12,fontWeight:"bold",marginBottom:8,
+                        color:item.color==="rainbow"?getRainbowColor("aperçu"):item.color,
+                        textShadow:`0 0 8px ${item.color==="rainbow"?getRainbowColor("aperçu"):item.color}55`}}>
+                        Aperçu pseudo ✦
+                      </div>
+                    )}
+                    {item.type==="frame"&&(
+                      <div style={{height:6,borderRadius:2,background:item.frameColor,marginBottom:8}}/>
+                    )}
+                    {item.type==="badge"&&(
+                      <div style={{fontSize:11,color:rc,marginBottom:8,letterSpacing:1}}>{item.name}</div>
+                    )}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <div style={{fontSize:13,fontWeight:"bold",color:"#ffdc32"}}>
+                        💰 {item.price.toLocaleString()} SC
+                      </div>
+                      {owned ? (
+                        <button onClick={()=>isEquipped?unequipItem(item.type):equipItem(item)}
+                          style={{background:isEquipped?"#ef444415":"#10b98115",
+                            border:`1px solid ${isEquipped?"#ef444440":"#10b98140"}`,
+                            color:isEquipped?"#ef4444":"#10b981",
+                            padding:"5px 10px",borderRadius:2,cursor:"pointer",
+                            fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                          {isEquipped?"✕ Retirer":"✓ Équiper"}
+                        </button>
+                      ) : (
+                        <button onClick={()=>me?buyItem(item):setView("auth")}
+                          disabled={tooExpensive}
+                          style={{background:canBuy?"#ffdc32":tooExpensive?"#1a1a1a":"#ffdc3220",
+                            color:canBuy?"#0d0d0d":tooExpensive?"#444":"#ffdc32",
+                            border:"none",padding:"5px 10px",borderRadius:2,
+                            cursor:canBuy?"pointer":"not-allowed",
+                            fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                          {!me?"🔐 Connexion":tooExpensive?"SC insuffisants":"→ Acheter"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL ÉQUIPER APRÈS ACHAT ═══════════════════════════ */}
+      {equipModal && (
+        <div style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.95)",
+          backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+          onClick={()=>setEquipModal(null)}>
+          <div style={{background:"#111",border:`2px solid ${RARITY_COLOR[equipModal.rarity]}`,
+            borderRadius:4,padding:28,maxWidth:360,width:"100%"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:40,textAlign:"center",marginBottom:8}}>{equipModal.icon}</div>
+            <div style={{fontSize:16,fontWeight:"bold",textAlign:"center",marginBottom:4}}>{equipModal.name}</div>
+            <div style={{fontSize:10,color:RARITY_COLOR[equipModal.rarity],textAlign:"center",
+              letterSpacing:2,marginBottom:20,textTransform:"uppercase"}}>{equipModal.rarity}</div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>equipItem(equipModal)}
+                style={{...S.btn("#ffdc32","#0d0d0d",{flex:1})}}>✓ ÉQUIPER MAINTENANT</button>
+              <button onClick={()=>setEquipModal(null)}
+                style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>Plus tard</button>
+            </div>
+          </div>
         </div>
       )}
 
