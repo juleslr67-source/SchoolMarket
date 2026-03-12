@@ -56,6 +56,7 @@ const SHOP_ITEMS = [
   { id:"avatar_clown",  type:"avatar", name:"🤡 Clown",           desc:"Débloquer l'avatar Clown",          price:100,  icon:"🤡", rarity:"commun" },
   { id:"avatar_zombie", type:"avatar", name:"🧟 Zombie",          desc:"Débloquer l'avatar Zombie",         price:400,  icon:"🧟", rarity:"rare" },
 ];
+// Skins ajoutés dynamiquement après définition de SKINS (voir plus bas)
 
 const RARITY_COLOR = { commun:"#888", rare:"#3b82f6", épique:"#a855f7", légendaire:"#ffd700" };
 const RARITY_BG    = { commun:"#88888815", rare:"#3b82f615", épique:"#a855f715", légendaire:"#ffd70015" };
@@ -82,8 +83,243 @@ function getUserFrame(user) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// SKINS — personnages pixel art / SVG animés
+// ══════════════════════════════════════════════════════════════════
+const SKINS = [
+  // COMMUN ─────────────────────────────────────────────────────────
+  {
+    id:"skin_peasant", name:"Le Paysan", rarity:"commun", price:800,
+    desc:"Un humble élève en uniforme gris. Tout le monde commence ici.",
+    colors:{body:"#6b7280",head:"#fbbf24",detail:"#374151",eye:"#1f2937"},
+  },
+  {
+    id:"skin_nerd", name:"Le Nerd", rarity:"commun", price:1200,
+    desc:"Lunettes rondes, cartable XXL. Analyse les cotes avec précision.",
+    colors:{body:"#3b82f6",head:"#fde68a",detail:"#1d4ed8",eye:"#1e3a8a"},
+    accessory:"glasses",
+  },
+  // RARE ───────────────────────────────────────────────────────────
+  {
+    id:"skin_shark_b", name:"Le Requin Bleu", rarity:"rare", price:5000,
+    desc:"Costume bleu marine, regard froid. Il flaire les mauvaises cotes.",
+    colors:{body:"#1e40af",head:"#fde68a",detail:"#93c5fd",eye:"#172554"},
+    accessory:"tie",
+  },
+  {
+    id:"skin_rebel", name:"Le Rebelle", rarity:"rare", price:6000,
+    desc:"Veste noire, cheveux en feu. Parie contre tout le monde et gagne.",
+    colors:{body:"#111827",head:"#fde68a",detail:"#ef4444",eye:"#111827"},
+    accessory:"flames",
+  },
+  {
+    id:"skin_hacker", name:"Le Hacker", rarity:"rare", price:7500,
+    desc:"Capuche verte, écran dans les yeux. Il connaît les résultats avant tout le monde.",
+    colors:{body:"#064e3b",head:"#d1fae5",detail:"#10b981",eye:"#065f46"},
+    accessory:"hood",
+  },
+  // ÉPIQUE ─────────────────────────────────────────────────────────
+  {
+    id:"skin_phantom", name:"Le Fantôme", rarity:"épique", price:15000,
+    desc:"Silhouette blanche translucide. Personne ne sait qui il est vraiment.",
+    colors:{body:"#e0e7ff",head:"#f8fafc",detail:"#6366f1",eye:"#312e81"},
+    accessory:"ghost",
+  },
+  {
+    id:"skin_dragon", name:"Le Dragon", rarity:"épique", price:20000,
+    desc:"Écailles rouges, yeux de braise. La légende vivante du lycée.",
+    colors:{body:"#991b1b",head:"#fde68a",detail:"#fbbf24",eye:"#7f1d1d"},
+    accessory:"horns",
+  },
+  {
+    id:"skin_prophet", name:"Le Prophète", rarity:"épique", price:25000,
+    desc:"Robe violette, orbe de cristal. Ses prédictions se réalisent toujours.",
+    colors:{body:"#581c87",head:"#fde68a",detail:"#c084fc",eye:"#3b0764"},
+    accessory:"orb",
+  },
+  // LÉGENDAIRE ─────────────────────────────────────────────────────
+  {
+    id:"skin_god", name:"Le Dieu du Marché", rarity:"légendaire", price:50000,
+    desc:"Armure dorée, aura divine. Il n'a jamais perdu un seul pari.",
+    colors:{body:"#78350f",head:"#fde68a",detail:"#fbbf24",eye:"#451a03"},
+    accessory:"crown",
+  },
+  {
+    id:"skin_void", name:"L'Enfant du Vide", rarity:"légendaire", price:75000,
+    desc:"Corps de galaxie, yeux cosmiques. Il vient d'un autre univers.",
+    colors:{body:"#0f172a",head:"#e0e7ff",detail:"#818cf8",eye:"#4338ca"},
+    accessory:"galaxy",
+  },
+  {
+    id:"skin_omega", name:"OMEGA", rarity:"légendaire", price:99999,
+    desc:"Le skin ultime. Un seul être peut le posséder en même temps.",
+    colors:{body:"#000000",head:"#ffd700",detail:"#ffffff",eye:"#ef4444"},
+    accessory:"omega",
+  },
+];
 
-let db = null;
+// Composant skin SVG pixel/semi-3D
+function SkinDisplay({ skin, size=48, animate=false }) {
+  const { colors, accessory } = skin;
+  const s = size;
+  const head = s * 0.38;
+  const bodyW = s * 0.52;
+  const bodyH = s * 0.38;
+  const legH = s * 0.22;
+  const hx = (s - head) / 2;
+  const hy = s * 0.04;
+  const bx = (s - bodyW) / 2;
+  const by = hy + head - s*0.04;
+  const lx1 = bx + bodyW*0.15;
+  const lx2 = bx + bodyW*0.55;
+  const ly = by + bodyH;
+
+  const isGalaxy = accessory==="galaxy" || accessory==="omega";
+  const isGhost  = accessory==="ghost";
+
+  return (
+    <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} style={{
+      display:"block", filter: skin.rarity==="légendaire"
+        ? `drop-shadow(0 0 ${s*0.12}px ${colors.detail}) drop-shadow(0 0 ${s*0.06}px ${colors.detail})`
+        : skin.rarity==="épique"
+        ? `drop-shadow(0 0 ${s*0.08}px ${colors.detail})`
+        : "none",
+      opacity: isGhost ? 0.85 : 1,
+    }}>
+      <defs>
+        {isGalaxy && (
+          <radialGradient id={`gal_${skin.id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={colors.detail} stopOpacity="0.9"/>
+            <stop offset="60%" stopColor={colors.body} stopOpacity="1"/>
+            <stop offset="100%" stopColor="#000" stopOpacity="1"/>
+          </radialGradient>
+        )}
+        <linearGradient id={`body_${skin.id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={colors.body} stopOpacity="1"/>
+          <stop offset="100%" stopColor={colors.detail} stopOpacity="0.7"/>
+        </linearGradient>
+        <linearGradient id={`head_${skin.id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={colors.head}/>
+          <stop offset="100%" stopColor={colors.head} stopOpacity="0.8"/>
+        </linearGradient>
+        {/* Shine effect */}
+        <linearGradient id={`shine_${skin.id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.25"/>
+          <stop offset="100%" stopColor="#fff" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+
+      {/* Ombre portée */}
+      <ellipse cx={s/2} cy={s*0.97} rx={s*0.2} ry={s*0.03} fill="#000" opacity="0.3"/>
+
+      {/* Jambes */}
+      <rect x={lx1} y={ly} width={bodyW*0.28} height={legH} rx={s*0.03}
+        fill={`url(#body_${skin.id})`} stroke={colors.detail} strokeWidth={s*0.015}/>
+      <rect x={lx2} y={ly} width={bodyW*0.28} height={legH} rx={s*0.03}
+        fill={`url(#body_${skin.id})`} stroke={colors.detail} strokeWidth={s*0.015}/>
+
+      {/* Corps */}
+      <rect x={bx} y={by} width={bodyW} height={bodyH} rx={s*0.04}
+        fill={isGalaxy?`url(#gal_${skin.id})`:`url(#body_${skin.id})`}
+        stroke={colors.detail} strokeWidth={s*0.02}/>
+      {/* Shine corps */}
+      <rect x={bx+s*0.02} y={by+s*0.02} width={bodyW*0.35} height={bodyH*0.4} rx={s*0.02}
+        fill={`url(#shine_${skin.id})`}/>
+
+      {/* Bras gauche */}
+      <rect x={bx-bodyW*0.18} y={by+bodyH*0.05} width={bodyW*0.18} height={bodyH*0.65} rx={s*0.03}
+        fill={`url(#body_${skin.id})`} stroke={colors.detail} strokeWidth={s*0.015}/>
+      {/* Bras droit */}
+      <rect x={bx+bodyW} y={by+bodyH*0.05} width={bodyW*0.18} height={bodyH*0.65} rx={s*0.03}
+        fill={`url(#body_${skin.id})`} stroke={colors.detail} strokeWidth={s*0.015}/>
+
+      {/* Tête */}
+      <rect x={hx} y={hy} width={head} height={head} rx={s*0.06}
+        fill={`url(#head_${skin.id})`} stroke={colors.detail} strokeWidth={s*0.025}/>
+      {/* Shine tête */}
+      <rect x={hx+s*0.02} y={hy+s*0.02} width={head*0.4} height={head*0.35} rx={s*0.02}
+        fill={`url(#shine_${skin.id})`}/>
+
+      {/* Yeux */}
+      <rect x={hx+head*0.2} y={hy+head*0.42} width={head*0.18} height={head*0.18} rx={1}
+        fill={isGalaxy?colors.detail:colors.eye}/>
+      <rect x={hx+head*0.6} y={hy+head*0.42} width={head*0.18} height={head*0.18} rx={1}
+        fill={isGalaxy?colors.detail:colors.eye}/>
+      {/* Reflet yeux */}
+      <rect x={hx+head*0.22} y={hy+head*0.44} width={head*0.06} height={head*0.06} rx={1} fill="#fff" opacity="0.7"/>
+      <rect x={hx+head*0.62} y={hy+head*0.44} width={head*0.06} height={head*0.06} rx={1} fill="#fff" opacity="0.7"/>
+
+      {/* Accessoires */}
+      {accessory==="glasses" && <>
+        <rect x={hx+head*0.12} y={hy+head*0.38} width={head*0.3} height={head*0.28} rx={head*0.08}
+          fill="none" stroke="#374151" strokeWidth={s*0.018}/>
+        <rect x={hx+head*0.56} y={hy+head*0.38} width={head*0.3} height={head*0.28} rx={head*0.08}
+          fill="none" stroke="#374151" strokeWidth={s*0.018}/>
+        <line x1={hx+head*0.42} y1={hy+head*0.5} x2={hx+head*0.56} y2={hy+head*0.5}
+          stroke="#374151" strokeWidth={s*0.015}/>
+      </>}
+      {accessory==="tie" && <>
+        <polygon points={`${s/2},${by+bodyH*0.05} ${s/2-s*0.04},${by+bodyH*0.45} ${s/2},${by+bodyH*0.65} ${s/2+s*0.04},${by+bodyH*0.45}`}
+          fill={colors.detail} stroke={colors.body} strokeWidth={1}/>
+      </>}
+      {accessory==="crown" && <>
+        <polygon points={`${hx},${hy} ${hx+head*0.25},${hy-s*0.1} ${hx+head*0.5},${hy-s*0.06} ${hx+head*0.75},${hy-s*0.1} ${hx+head},${hy}`}
+          fill="#ffd700" stroke="#f59e0b" strokeWidth={s*0.015}/>
+        <circle cx={hx+head*0.5} cy={hy-s*0.06} r={s*0.025} fill="#ef4444"/>
+        <circle cx={hx+head*0.25} cy={hy-s*0.09} r={s*0.02} fill="#22d3ee"/>
+        <circle cx={hx+head*0.75} cy={hy-s*0.09} r={s*0.02} fill="#10b981"/>
+      </>}
+      {accessory==="horns" && <>
+        <polygon points={`${hx+head*0.15},${hy} ${hx+head*0.05},${hy-s*0.12} ${hx+head*0.3},${hy}`}
+          fill={colors.detail}/>
+        <polygon points={`${hx+head*0.85},${hy} ${hx+head*0.95},${hy-s*0.12} ${hx+head*0.7},${hy}`}
+          fill={colors.detail}/>
+      </>}
+      {accessory==="flames" && <>
+        <ellipse cx={hx+head*0.3} cy={hy-s*0.05} rx={s*0.04} ry={s*0.07} fill="#ef4444" opacity="0.9"/>
+        <ellipse cx={hx+head*0.5} cy={hy-s*0.08} rx={s*0.05} ry={s*0.09} fill="#f97316" opacity="0.9"/>
+        <ellipse cx={hx+head*0.7} cy={hy-s*0.05} rx={s*0.04} ry={s*0.07} fill="#ef4444" opacity="0.9"/>
+      </>}
+      {accessory==="hood" && <>
+        <path d={`M${hx-s*0.02},${hy+head*0.5} Q${hx+head*0.5},${hy-s*0.05} ${hx+head+s*0.02},${hy+head*0.5}`}
+          fill={colors.body} stroke={colors.detail} strokeWidth={s*0.02} fillOpacity="0.95"/>
+      </>}
+      {accessory==="ghost" && <>
+        <ellipse cx={hx+head*0.5} cy={hy+head*0.5} rx={head*0.55} ry={head*0.55}
+          fill={colors.body} fillOpacity="0.3"/>
+      </>}
+      {accessory==="orb" && <>
+        <circle cx={bx+bodyW+bodyW*0.3} cy={by+bodyH*0.3} r={s*0.07}
+          fill={colors.detail} fillOpacity="0.6" stroke={colors.detail} strokeWidth={1}/>
+        <circle cx={bx+bodyW+bodyW*0.27} cy={by+bodyH*0.25} r={s*0.025} fill="#fff" opacity="0.5"/>
+      </>}
+      {accessory==="galaxy" && <>
+        {[0,1,2,3,4].map(i=>(
+          <circle key={i} cx={hx+head*(0.2+i*0.15)} cy={hy+head*0.15+i%2*head*0.1}
+            r={s*0.012} fill="#fff" opacity={0.3+i*0.1}/>
+        ))}
+      </>}
+      {accessory==="omega" && <>
+        <text x={s/2} y={hy-s*0.01} textAnchor="middle" fontSize={s*0.13}
+          fontWeight="bold" fill="#ffd700" stroke="#000" strokeWidth={0.5}>Ω</text>
+        <ellipse cx={s/2} cy={hy+head*0.5} rx={head*0.6} ry={head*0.05}
+          fill="#ffd700" opacity="0.3"/>
+      </>}
+    </svg>
+  );
+}
+
+function getUserSkin(user) {
+  if (!user?.equipped?.skin) return null;
+  return SKINS.find(s=>s.id===user.equipped.skin);
+}
+
+// Injecter les skins dans SHOP_ITEMS maintenant que SKINS est défini
+SKINS.forEach(sk => SHOP_ITEMS.push({
+  id:sk.id, type:"skin", name:sk.name, desc:sk.desc, price:sk.price, icon:"🧍", rarity:sk.rarity
+}));
+
+// ══════════════════════════════════════════════════════════════════
+
 let firebaseOk = false;
 try {
   const app = initializeApp(FIREBASE_CONFIG);
@@ -537,6 +773,7 @@ export default function SchoolMarket() {
     if (item.type==="pseudoColor") equipped.pseudoColor = item.id;
     if (item.type==="badge")       equipped.badge       = item.id;
     if (item.type==="frame")       equipped.frame       = item.id;
+    if (item.type==="skin")        equipped.skin        = item.id;
     if (item.type==="avatar") {
       // Débloquer l'avatar + l'équiper
       const newAvatars = [...(freshMe.unlockedAvatars||[])];
@@ -1045,19 +1282,36 @@ export default function SchoolMarket() {
                     const colors=["#94a3b8","#ffdc32","#cd7c2f"];
                     const medals=["🥈","🥇","🥉"];
                     const heights=[130,162,110];
+                    const podiumSkin=getUserSkin(u);
+                    const podiumSkinData=podiumSkin?SKINS.find(s=>s.id===podiumSkin.id):null;
+                    const pColor=getPseudoColor(u);
+                    const badge=getUserBadge(u);
                     return (
                       <div key={u.id} style={{flex:1,background:"#0f0f0f",border:`1px solid ${colors[i]}22`,
-                        borderRadius:4,padding:14,textAlign:"center",height:heights[i],
+                        borderRadius:4,padding:14,textAlign:"center",minHeight:heights[i],
                         display:"flex",flexDirection:"column",justifyContent:"flex-end",cursor:"pointer",
-                        transition:"border-color 0.15s"}}
+                        transition:"border-color 0.15s",position:"relative",overflow:"hidden"}}
                         onMouseEnter={e=>e.currentTarget.style.borderColor=colors[i]}
                         onMouseLeave={e=>e.currentTarget.style.borderColor=`${colors[i]}22`}
                         onClick={()=>{setProfileUser(u);setView("profile");}}>
-                        <div style={{fontSize:24,marginBottom:3}}>{u.avatar}</div>
-                        <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {podiumSkinData&&<div style={{position:"absolute",inset:0,
+                          background:`radial-gradient(circle at 50% 40%, ${podiumSkinData.colors.detail}18, transparent 70%)`,
+                          pointerEvents:"none"}}/>}
+                        {podiumSkinData ? (
+                          <div style={{display:"flex",justifyContent:"center",marginBottom:4,
+                            filter:podiumSkinData.rarity==="légendaire"?`drop-shadow(0 0 10px ${podiumSkinData.colors.detail})`
+                              :podiumSkinData.rarity==="épique"?`drop-shadow(0 0 6px ${podiumSkinData.colors.detail})`:"none"}}>
+                            <SkinDisplay skin={podiumSkinData} size={i===1?68:54}/>
+                          </div>
+                        ) : (
+                          <div style={{fontSize:i===1?32:24,marginBottom:3}}>{u.avatar}</div>
+                        )}
+                        <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                          color:pColor||"inherit",textShadow:pColor?`0 0 8px ${pColor}55`:undefined}}>
                           {u.pseudo}
                           {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",marginLeft:4}}>ADMIN</span>}
                         </div>
+                        {badge&&<div style={{fontSize:8,color:RARITY_COLOR[badge.rarity],marginTop:1}}>{badge.name}</div>}
                         <div style={{fontSize:20,fontWeight:"bold",color:colors[i]}}>{medals[i]}</div>
                         <div style={{fontSize:10,color:"#444",marginTop:3}}>{u.profit>=0?"+":""}{u.profit.toLocaleString()} SC</div>
                       </div>
@@ -1079,22 +1333,32 @@ export default function SchoolMarket() {
                   const pColor=getPseudoColor(u);
                   const badge=getUserBadge(u);
                   const frame=getUserFrame(u);
+                  const skin=getUserSkin(u);
+                  const skinData=skin?SKINS.find(s=>s.id===skin.id):null;
                   return (
-                    <div key={u.id} style={{display:"grid",gridTemplateColumns:"44px 1fr 60px 60px 60px 80px",
-                      padding:"11px 16px",borderBottom:"1px solid #111",
+                    <div key={u.id} style={{display:"grid",
+                      gridTemplateColumns:skinData?"54px 44px 1fr 60px 60px 60px 80px":"44px 1fr 60px 60px 60px 80px",
+                      padding:"8px 16px",borderBottom:"1px solid #111",
                       background:isMe?"#ffdc3206":"transparent",
                       borderLeft:isMe&&!frame?"3px solid #ffdc32":"3px solid transparent",
-                      cursor:"pointer",position:"relative",
-                      boxShadow:frame?`inset 0 0 0 2px transparent`:undefined}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#ffffff06"}
+                      cursor:"pointer",position:"relative",alignItems:"center"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#ffffff08"}
                       onMouseLeave={e=>e.currentTarget.style.background=isMe?"#ffdc3206":"transparent"}
                       onClick={()=>{setProfileUser(u);setView("profile");}}>
-                      {frame&&<div style={{position:"absolute",inset:0,borderRadius:0,
-                        background:frame.frameColor,opacity:0.15,pointerEvents:"none",zIndex:0}}/>}
+                      {frame&&<div style={{position:"absolute",inset:0,
+                        background:frame.frameColor,opacity:0.12,pointerEvents:"none",zIndex:0}}/>}
+                      {/* Skin (si équipé) */}
+                      {skinData && (
+                        <div style={{position:"relative",zIndex:1,
+                          filter:skinData.rarity==="légendaire"?`drop-shadow(0 0 6px ${skinData.colors.detail})`
+                            :skinData.rarity==="épique"?`drop-shadow(0 0 4px ${skinData.colors.detail})`:"none"}}>
+                          <SkinDisplay skin={skinData} size={44}/>
+                        </div>
+                      )}
                       <div style={{fontSize:12,fontWeight:"bold",color:rc[i]||"#444",position:"relative",zIndex:1}}>
                         {i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</div>
                       <div style={{display:"flex",alignItems:"center",gap:7,position:"relative",zIndex:1}}>
-                        <span style={{fontSize:16}}>{u.avatar}</span>
+                        {!skinData && <span style={{fontSize:16}}>{u.avatar}</span>}
                         <div>
                           <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
                             <span style={{fontSize:12,color:pColor||(isMe?"#ffdc32":"#ccc"),fontWeight:"bold",
@@ -1105,6 +1369,7 @@ export default function SchoolMarket() {
                             {u.banned&&<span style={{fontSize:8,color:"#ef4444"}}>BANNI</span>}
                           </div>
                           {badge&&<div style={{fontSize:9,color:RARITY_COLOR[badge.rarity],letterSpacing:1}}>{badge.name}</div>}
+                          {skinData&&<div style={{fontSize:8,color:RARITY_COLOR[skinData.rarity],opacity:0.8}}>{skinData.name}</div>}
                         </div>
                       </div>
                       <div style={{textAlign:"right",color:"#10b981",fontSize:12,fontWeight:"bold",position:"relative",zIndex:1}}>{u.wins}</div>
@@ -1143,17 +1408,18 @@ export default function SchoolMarket() {
                 </div>
               </div>
               <div style={{flex:1,display:"flex",gap:8,flexWrap:"wrap"}}>
-                {["pseudoColor","badge","frame"].map(type=>{
+                {["skin","pseudoColor","badge","frame"].map(type=>{
                   const freshMe=usersRef.current.find(u=>u.id===me.id)||me;
                   const eqId=freshMe.equipped?.[type];
                   const eqItem=eqId?SHOP_ITEMS.find(i=>i.id===eqId):null;
-                  const labels={pseudoColor:"Couleur pseudo",badge:"Badge",frame:"Cadre"};
+                  const labels={skin:"Skin",pseudoColor:"Couleur pseudo",badge:"Badge",frame:"Cadre"};
+                  const sk=type==="skin"&&eqItem?SKINS.find(s=>s.id===eqItem.id):null;
                   return (
                     <div key={type} style={{background:"#111",border:"1px solid #252525",borderRadius:3,padding:"8px 12px",minWidth:120}}>
                       <div style={{fontSize:8,color:"#444",letterSpacing:2,marginBottom:4}}>{labels[type].toUpperCase()}</div>
                       {eqItem ? (
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <span style={{fontSize:14}}>{eqItem.icon}</span>
+                          {sk ? <SkinDisplay skin={sk} size={28}/> : <span style={{fontSize:14}}>{eqItem.icon}</span>}
                           <span style={{fontSize:10,color:RARITY_COLOR[eqItem.rarity]}}>{eqItem.name}</span>
                           <button onClick={()=>unequipItem(type)} style={{marginLeft:"auto",background:"transparent",
                             border:"none",color:"#444",cursor:"pointer",fontSize:11}}>✕</button>
@@ -1170,7 +1436,7 @@ export default function SchoolMarket() {
 
           {/* Filtres */}
           <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
-            {[["tous","Tout"],["pseudoColor","🎨 Couleurs"],["badge","🏷 Badges"],["frame","🖼 Cadres"],["avatar","😈 Avatars"]].map(([f,lbl])=>(
+            {[["tous","Tout"],["skin","🧍 Skins"],["pseudoColor","🎨 Couleurs"],["badge","🏷 Badges"],["frame","🖼 Cadres"],["avatar","😈 Avatars"]].map(([f,lbl])=>(
               <button key={f} onClick={()=>setShopFilter(f)} style={{
                 background:shopFilter===f?"#ffdc32":"transparent",color:shopFilter===f?"#0d0d0d":"#555",
                 border:shopFilter===f?"none":"1px solid #252525",padding:"5px 14px",borderRadius:2,
@@ -1191,61 +1457,122 @@ export default function SchoolMarket() {
               const tooExpensive = me && !owned && freshMe.wallet<item.price;
               const rc = RARITY_COLOR[item.rarity];
               const rb = RARITY_BG[item.rarity];
+              const sk = item.type==="skin" ? SKINS.find(s=>s.id===item.id) : null;
               return (
                 <div key={item.id} style={{background:"#0f0f0f",border:`1px solid ${rc}33`,borderRadius:4,
-                  padding:16,display:"flex",flexDirection:"column",gap:8,
+                  padding:sk?0:16, display:"flex",flexDirection:"column",gap:sk?0:8,
                   opacity:tooExpensive?0.5:1,position:"relative",overflow:"hidden"}}>
-                  {/* Rarity glow */}
-                  <div style={{position:"absolute",inset:0,background:rb,pointerEvents:"none"}}/>
-                  <div style={{position:"relative",zIndex:1}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                      <span style={{fontSize:28}}>{item.icon}</span>
-                      <span style={{fontSize:8,fontWeight:"bold",letterSpacing:2,
-                        color:rc,background:`${rc}20`,padding:"2px 6px",borderRadius:2,textTransform:"uppercase"}}>
-                        {item.rarity}</span>
+                  <div style={{position:"absolute",inset:0,background:rb,pointerEvents:"none",zIndex:0}}/>
+
+                  {sk ? (
+                    // Carte skin spéciale
+                    <div style={{position:"relative",zIndex:1}}>
+                      {/* Zone skin avec fond dégradé */}
+                      <div style={{
+                        background:`linear-gradient(160deg, ${sk.colors.body}22, #0a0a0a)`,
+                        borderBottom:`1px solid ${rc}30`,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        padding:"20px 0 12px",position:"relative",overflow:"hidden"}}>
+                        {/* Cercle lumineux derrière le skin */}
+                        <div style={{position:"absolute",width:80,height:80,borderRadius:"50%",
+                          background:`radial-gradient(circle, ${sk.colors.detail}30, transparent 70%)`,
+                          top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
+                        {/* Skin agrandi */}
+                        <div style={{
+                          filter:sk.rarity==="légendaire"?`drop-shadow(0 0 12px ${sk.colors.detail})`
+                            :sk.rarity==="épique"?`drop-shadow(0 0 8px ${sk.colors.detail})`:"none",
+                          transition:"transform 0.3s"
+                        }}
+                          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.1) rotate(-3deg)"}
+                          onMouseLeave={e=>e.currentTarget.style.transform="scale(1) rotate(0deg)"}>
+                          <SkinDisplay skin={sk} size={80}/>
+                        </div>
+                        {/* Badge rareté */}
+                        <div style={{position:"absolute",top:8,right:8,fontSize:8,fontWeight:"bold",
+                          letterSpacing:2,color:rc,background:`${rc}20`,padding:"2px 6px",borderRadius:2,
+                          textTransform:"uppercase"}}>{sk.rarity}</div>
+                      </div>
+                      <div style={{padding:"12px 14px"}}>
+                        <div style={{fontSize:13,fontWeight:"bold",marginBottom:3}}>{sk.name}</div>
+                        <div style={{fontSize:10,color:"#444",marginBottom:10,lineHeight:1.4}}>{sk.desc}</div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                          <div style={{fontSize:14,fontWeight:"bold",color:"#ffdc32"}}>
+                            💰 {sk.price.toLocaleString()} SC
+                          </div>
+                          {owned ? (
+                            <button onClick={()=>isEquipped?unequipItem("skin"):equipItem(item)}
+                              style={{background:isEquipped?"#ef444415":"#10b98115",
+                                border:`1px solid ${isEquipped?"#ef444440":"#10b98140"}`,
+                                color:isEquipped?"#ef4444":"#10b981",
+                                padding:"5px 10px",borderRadius:2,cursor:"pointer",
+                                fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                              {isEquipped?"✕ Retirer":"✓ Équiper"}
+                            </button>
+                          ) : (
+                            <button onClick={()=>me?buyItem(item):setView("auth")}
+                              disabled={tooExpensive}
+                              style={{background:canBuy?"#ffdc32":tooExpensive?"#1a1a1a":"#ffdc3220",
+                                color:canBuy?"#0d0d0d":tooExpensive?"#444":"#ffdc32",
+                                border:"none",padding:"5px 10px",borderRadius:2,
+                                cursor:canBuy?"pointer":"not-allowed",
+                                fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                              {!me?"🔐 Connexion":tooExpensive?"SC insuffisants":"→ Acheter"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{fontSize:13,fontWeight:"bold",marginBottom:3}}>{item.name}</div>
-                    <div style={{fontSize:10,color:"#444",marginBottom:10,lineHeight:1.4}}>{item.desc}</div>
-                    {/* Aperçu */}
-                    {item.type==="pseudoColor"&&(
-                      <div style={{fontSize:12,fontWeight:"bold",marginBottom:8,
-                        color:item.color==="rainbow"?getRainbowColor("aperçu"):item.color,
-                        textShadow:`0 0 8px ${item.color==="rainbow"?getRainbowColor("aperçu"):item.color}55`}}>
-                        Aperçu pseudo ✦
+                  ) : (
+                    // Carte normale
+                    <div style={{position:"relative",zIndex:1}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                        <span style={{fontSize:28}}>{item.icon}</span>
+                        <span style={{fontSize:8,fontWeight:"bold",letterSpacing:2,
+                          color:rc,background:`${rc}20`,padding:"2px 6px",borderRadius:2,textTransform:"uppercase"}}>
+                          {item.rarity}</span>
                       </div>
-                    )}
-                    {item.type==="frame"&&(
-                      <div style={{height:6,borderRadius:2,background:item.frameColor,marginBottom:8}}/>
-                    )}
-                    {item.type==="badge"&&(
-                      <div style={{fontSize:11,color:rc,marginBottom:8,letterSpacing:1}}>{item.name}</div>
-                    )}
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <div style={{fontSize:13,fontWeight:"bold",color:"#ffdc32"}}>
-                        💰 {item.price.toLocaleString()} SC
-                      </div>
-                      {owned ? (
-                        <button onClick={()=>isEquipped?unequipItem(item.type):equipItem(item)}
-                          style={{background:isEquipped?"#ef444415":"#10b98115",
-                            border:`1px solid ${isEquipped?"#ef444440":"#10b98140"}`,
-                            color:isEquipped?"#ef4444":"#10b981",
-                            padding:"5px 10px",borderRadius:2,cursor:"pointer",
-                            fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
-                          {isEquipped?"✕ Retirer":"✓ Équiper"}
-                        </button>
-                      ) : (
-                        <button onClick={()=>me?buyItem(item):setView("auth")}
-                          disabled={tooExpensive}
-                          style={{background:canBuy?"#ffdc32":tooExpensive?"#1a1a1a":"#ffdc3220",
-                            color:canBuy?"#0d0d0d":tooExpensive?"#444":"#ffdc32",
-                            border:"none",padding:"5px 10px",borderRadius:2,
-                            cursor:canBuy?"pointer":"not-allowed",
-                            fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
-                          {!me?"🔐 Connexion":tooExpensive?"SC insuffisants":"→ Acheter"}
-                        </button>
+                      <div style={{fontSize:13,fontWeight:"bold",marginBottom:3}}>{item.name}</div>
+                      <div style={{fontSize:10,color:"#444",marginBottom:10,lineHeight:1.4}}>{item.desc}</div>
+                      {item.type==="pseudoColor"&&(
+                        <div style={{fontSize:12,fontWeight:"bold",marginBottom:8,
+                          color:item.color==="rainbow"?getRainbowColor("aperçu"):item.color,
+                          textShadow:`0 0 8px ${item.color==="rainbow"?getRainbowColor("aperçu"):item.color}55`}}>
+                          Aperçu pseudo ✦
+                        </div>
                       )}
+                      {item.type==="frame"&&(
+                        <div style={{height:6,borderRadius:2,background:item.frameColor,marginBottom:8}}/>
+                      )}
+                      {item.type==="badge"&&(
+                        <div style={{fontSize:11,color:rc,marginBottom:8,letterSpacing:1}}>{item.name}</div>
+                      )}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <div style={{fontSize:13,fontWeight:"bold",color:"#ffdc32"}}>
+                          💰 {item.price.toLocaleString()} SC
+                        </div>
+                        {owned ? (
+                          <button onClick={()=>isEquipped?unequipItem(item.type):equipItem(item)}
+                            style={{background:isEquipped?"#ef444415":"#10b98115",
+                              border:`1px solid ${isEquipped?"#ef444440":"#10b98140"}`,
+                              color:isEquipped?"#ef4444":"#10b981",
+                              padding:"5px 10px",borderRadius:2,cursor:"pointer",
+                              fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                            {isEquipped?"✕ Retirer":"✓ Équiper"}
+                          </button>
+                        ) : (
+                          <button onClick={()=>me?buyItem(item):setView("auth")}
+                            disabled={tooExpensive}
+                            style={{background:canBuy?"#ffdc32":tooExpensive?"#1a1a1a":"#ffdc3220",
+                              color:canBuy?"#0d0d0d":tooExpensive?"#444":"#ffdc32",
+                              border:"none",padding:"5px 10px",borderRadius:2,
+                              cursor:canBuy?"pointer":"not-allowed",
+                              fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                            {!me?"🔐 Connexion":tooExpensive?"SC insuffisants":"→ Acheter"}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
