@@ -567,7 +567,6 @@ export default function SchoolMarket() {
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           {me ? (
             <>
-            <>
               {/* Cloche notifs */}
               <div style={{position:"relative"}}>
                 <button onClick={()=>{setNotifOpen(o=>!o); if(unreadCount>0) markNotifsRead();}}
