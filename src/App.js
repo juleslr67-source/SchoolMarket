@@ -16,7 +16,7 @@ const ADMIN_PSEUDO   = "JULES-ADMIN";
 const ADMIN_PASSWORD = "schoolmarket2025";
 
 const AVATARS   = ["🦁","🎯","🦈","⏰","🔮","🐺","🦊","🐸","🤖","👾","🎃","💀","🦅","🐉","🌙","🐯","🦋","🎭","🧠","⚡"];
-const CAT_COLOR = { profs:"#f59e0b", eleves:"#ef4444", cours:"#3b82f6", "vie scolaire":"#10b981" };
+const CAT_COLOR = { profs:"#f59e0b", eleves:"#ef4444", cours:"#3b82f6", "vie scolaire":"#10b981", "hors les murs":"#ec4899" };
 const EMOJIS    = ["🎲","🕐","⚠️","📚","😱","🍟","📢","🎉","💀","🏃","🤡","😴","🎓","📝","🏆","😤","🤔","💥","🫠","🤝"];
 
 let db = null;
@@ -421,7 +421,9 @@ export default function SchoolMarket() {
     return{...u,...s,winRate:t>0?Math.round(s.wins/t*100):0,profit:u.wallet-1000};
   }).sort((a,b)=>b.wallet-a.wallet);
 
-  const filtered = filter==="tous"?markets:markets.filter(m=>m.category===filter);
+  const filtered = filter==="tous"
+    ? markets.filter(m=>!m.resolved)
+    : markets.filter(m=>m.category===filter && !m.resolved);
   const myBetOn  = mkt=>(mkt.bets||[]).find(b=>b.userId===me?.id);
   const myUserFresh = me ? usersRef.current.find(u=>u.id===me.id)||me : null;
   const pendingRenames = visibleUsers.filter(u=>u.renameRequest);
@@ -459,7 +461,7 @@ export default function SchoolMarket() {
           SM<span style={{color:"#e8e0d0"}}>.</span>
         </div>
         <nav style={{display:"flex",gap:2,flex:1,overflow:"auto"}}>
-          {[["markets","📊 Marchés"],["leaderboard","🏆 Classement"]].map(([v,lbl])=>(
+          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"]].map(([v,lbl])=>(
             <button key={v} onClick={()=>setView(v)} style={{
               background:view===v?"#ffdc3215":"transparent",
               color:view===v?"#ffdc32":"#555",border:"none",
@@ -714,7 +716,7 @@ export default function SchoolMarket() {
           <div style={{position:"sticky",top:58,zIndex:90,background:"rgba(13,13,13,0.97)",
             backdropFilter:"blur(12px)",borderBottom:"1px solid #1a1a1a",
             padding:"0 20px",display:"flex",gap:4,alignItems:"center",height:44,overflowX:"auto"}}>
-            {["tous","profs","eleves","cours","vie scolaire"].map(cat=>(
+            {["tous","profs","eleves","cours","vie scolaire","hors les murs"].map(cat=>(
               <button key={cat} onClick={()=>setFilter(cat)} style={{
                 background:filter===cat?"#ffdc32":"transparent",color:filter===cat?"#0d0d0d":"#555",
                 border:filter===cat?"none":"1px solid #252525",padding:"4px 12px",borderRadius:2,
@@ -771,7 +773,7 @@ export default function SchoolMarket() {
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginBottom:12}}>
                       <span style={{color:"#10b981"}}>OUI {odds.yesPct}%</span>
-                      <span style={{color:"#444"}}>{odds.total.toLocaleString()} SC misés</span>
+                      <span style={{color:"#ffdc32",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
                       <span style={{color:"#ef4444"}}>NON {odds.noPct}%</span>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -914,6 +916,85 @@ export default function SchoolMarket() {
                 })}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* CLÔTURÉS */}
+      {view==="clotures" && (
+        <div style={{maxWidth:1080,margin:"0 auto",padding:"28px 20px",position:"relative",zIndex:1}}>
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>HISTORIQUE</div>
+            <div style={{fontSize:24,fontWeight:"bold"}}>📁 Paris Clôturés</div>
+            <div style={{fontSize:11,color:"#444",marginTop:4}}>
+              {markets.filter(m=>m.resolved).length} pari{markets.filter(m=>m.resolved).length>1?"s":""} résolu{markets.filter(m=>m.resolved).length>1?"s":""}
+            </div>
+          </div>
+          {markets.filter(m=>m.resolved).length===0 ? (
+            <div style={{textAlign:"center",padding:"80px 0",color:"#2a2a2a",fontSize:13}}>
+              Aucun pari clôturé pour l'instant.
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
+              {markets.filter(m=>m.resolved).slice().reverse().map(mkt=>{
+                const odds=computeOdds(mkt);
+                const myBet=(mkt.bets||[]).find(b=>b.userId===me?.id);
+                const won=myBet?myBet.side===mkt.result:null;
+                return (
+                  <div key={mkt.id} style={{background:"#0f0f0f",border:`1px solid ${mkt.result==="yes"?"#10b98130":"#ef444430"}`,
+                    borderRadius:4,padding:16,position:"relative",opacity:0.85}}>
+                    {/* Badge catégorie */}
+                    <div style={{position:"absolute",top:10,right:10,fontSize:8,fontWeight:"bold",
+                      letterSpacing:2,color:CAT_COLOR[mkt.category]||"#444",
+                      background:`${CAT_COLOR[mkt.category]||"#444"}15`,padding:"2px 6px",borderRadius:2}}>
+                      {mkt.category?.toUpperCase()}
+                    </div>
+                    <div style={{fontSize:22,marginBottom:8}}>{mkt.emoji}</div>
+                    <div style={{fontSize:13,fontWeight:"bold",lineHeight:1.4,marginBottom:8,paddingRight:60}}>
+                      {mkt.title}
+                      <span style={{marginLeft:8,fontSize:9,color:mkt.result==="yes"?"#10b981":"#ef4444",
+                        background:mkt.result==="yes"?"#0a150a":"#1a0505",padding:"2px 6px",borderRadius:2}}>
+                        {mkt.result==="yes"?"✅ OUI":"❌ NON"}
+                      </span>
+                    </div>
+                    {/* Barre OUI/NON */}
+                    <div style={{display:"flex",gap:4,marginBottom:8}}>
+                      <div style={{flex:odds.yesPct,background:"#10b98120",height:5,borderRadius:2,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:2}}/>
+                      </div>
+                      <div style={{flex:odds.noPct,background:"#ef444420",height:5,borderRadius:2,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:2}}/>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:10}}>
+                      <span style={{color:"#10b981"}}>OUI {odds.yesPct}%</span>
+                      <span style={{color:"#ffdc32",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
+                      <span style={{color:"#ef4444"}}>NON {odds.noPct}%</span>
+                    </div>
+                    {/* Résultat du joueur */}
+                    {myBet && (
+                      <div style={{fontSize:10,padding:"6px 10px",borderRadius:2,marginBottom:8,
+                        background:won?"#0a150a":"#1a0505",
+                        border:`1px solid ${won?"#10b98130":"#ef444430"}`,
+                        color:won?"#10b981":"#ef4444"}}>
+                        {won?"🎉 Tu as gagné ce pari !":"😢 Tu as perdu ce pari."}
+                        {" · "}{myBet.amount} SC misés sur {myBet.side==="yes"?"OUI":"NON"}
+                      </div>
+                    )}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
+                      {isAdmin && (
+                        <button onClick={()=>setDelConfirm({type:"market",market:mkt})}
+                          style={{background:"#ef444410",border:"1px solid #ef444425",color:"#ef4444",
+                            padding:"4px 8px",borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
+                          🗑 Supprimer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -1123,7 +1204,7 @@ export default function SchoolMarket() {
             </Field>
             <Field label="CATÉGORIE">
               <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                {["profs","eleves","cours","vie scolaire"].map(cat=>(
+                {["profs","eleves","cours","vie scolaire","hors les murs"].map(cat=>(
                   <button key={cat} onClick={()=>setDraft(d=>({...d,category:cat}))} style={{
                     background:draft.category===cat?`${CAT_COLOR[cat]}20`:"transparent",
                     color:draft.category===cat?CAT_COLOR[cat]:"#444",
