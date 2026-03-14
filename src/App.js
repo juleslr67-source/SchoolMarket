@@ -142,7 +142,7 @@ export default function SchoolMarket() {
   const [betAmount,   setBetAmount]   = useState(50);
   const [betSide,     setBetSide]     = useState(null);
   const [createOpen,  setCreateOpen]  = useState(false);
-  const [draft,       setDraft]       = useState({title:"",category:"profs",emoji:"🎲"});
+  const [draft,       setDraft]       = useState({title:"",category:"profs",emoji:"🎲",deadline:""});
   const [draftErr,    setDraftErr]    = useState("");
   const [profileUser, setProfileUser] = useState(null);
   const [toast,       setToast]       = useState(null);
@@ -225,6 +225,7 @@ export default function SchoolMarket() {
     if (freshMe.wallet < amount) return showToast("Pas assez de SC","err");
     const mkt = marketsRef.current.find(m=>m.id===betModal.id);
     if (!mkt || mkt.resolved) return showToast("Marché fermé","err");
+    if (mkt.deadline && Date.now() > mkt.deadline) return showToast("⏰ Délai de pari dépassé !","err");
     const existing = (mkt.bets||[]).find(b=>b.userId===me.id&&!b.isPenalty);
     if (existing) return showToast("Tu as déjà parié sur ce marché","err");
     if (mkt.creatorId===me.id && !isAdmin) return showToast("Tu ne peux pas parier sur ton propre marché","err");
@@ -271,10 +272,11 @@ export default function SchoolMarket() {
       id:`m_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
       title:draft.title.trim(), category:draft.category, emoji:draft.emoji,
       creatorId:me.id, creatorPseudo:me.pseudo,
-      bets:[], resolved:false, result:null, ts:Date.now()
+      bets:[], resolved:false, result:null, ts:Date.now(),
+      deadline: draft.deadline ? new Date(draft.deadline).getTime() : null
     };
     saveM([...marketsRef.current, newMkt]);
-    setCreateOpen(false); setDraft({title:"",category:"profs",emoji:"🎲"});
+    setCreateOpen(false); setDraft({title:"",category:"profs",emoji:"🎲",deadline:""});
     showToast("🎉 Marché créé !");
   };
 
@@ -410,6 +412,18 @@ export default function SchoolMarket() {
     setMe(newMe);
     setMyRenamReq(false); setMyRenamInput(""); setMyRenamErr("");
     showToast(`✅ Pseudo changé : ${oldPseudo} → ${name}`);
+  };
+
+  // ── COMPTE À REBOURS ─────────────────────────────────────────────
+  const getCountdown = (deadline) => {
+    const diff = deadline - Date.now();
+    if (diff <= 0) return "⏰ Délai dépassé";
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    if (d > 0) return `⏳ ${d}j ${h}h restants`;
+    if (h > 0) return `⏳ ${h}h ${m}min restants`;
+    return `⏳ ${m}min restantes`;
   };
 
   // ── DÉRIVÉS ─────────────────────────────────────────────────────
@@ -822,7 +836,13 @@ export default function SchoolMarket() {
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
-                      <div style={{display:"flex",gap:6}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {mkt.deadline && !mkt.resolved && (
+                          <span style={{fontSize:9,fontWeight:"bold",
+                            color:Date.now()>mkt.deadline?"#ef4444":Date.now()>mkt.deadline-3600000?"#f97316":"#444"}}>
+                            {getCountdown(mkt.deadline)}
+                          </span>
+                        )}
                         {!mkt.resolved && me && !me.banned && !myBet && !isMine && (
                           <button onClick={e=>{e.stopPropagation();setBetModal(mkt);setBetSide(null);setBetAmount(50);}}
                             style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
@@ -1261,6 +1281,23 @@ export default function SchoolMarket() {
               </div>
             </Field>
             {draftErr&&<div style={{color:"#ef4444",fontSize:11,marginBottom:12,padding:"8px 12px",background:"#1a0505",borderRadius:2}}>{draftErr}</div>}
+            <Field label="DATE LIMITE DE PARI (optionnel)">
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <input type="datetime-local" value={draft.deadline}
+                  onChange={e=>setDraft(d=>({...d,deadline:e.target.value}))}
+                  style={{flex:1,background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
+                    padding:"8px 12px",borderRadius:2,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                {draft.deadline && (
+                  <button onClick={()=>setDraft(d=>({...d,deadline:""}))}
+                    style={{background:"transparent",border:"none",color:"#555",cursor:"pointer",fontSize:13}}>✕</button>
+                )}
+              </div>
+              {draft.deadline && (
+                <div style={{fontSize:9,color:"#444",marginTop:4}}>
+                  ⏳ Les paris seront bloqués après cette date
+                </div>
+              )}
+            </Field>
             <button onClick={createMarket} style={{...S.btn("#ffdc32","#0d0d0d")}}>→ PUBLIER</button>
             <button onClick={()=>setCreateOpen(false)} style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
           </div>
