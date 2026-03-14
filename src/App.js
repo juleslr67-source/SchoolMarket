@@ -538,7 +538,7 @@ export default function SchoolMarket() {
           SM<span style={{color:"#e8e0d0"}}>.</span>
         </div>
         <nav style={{display:"flex",gap:2,flex:1,overflow:"auto"}}>
-          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"]].map(([v,lbl])=>(
+          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"],["shop","🛒 Boutique"]].map(([v,lbl])=>(
             <button key={v} onClick={()=>setView(v)} style={{
               background:view===v?"#ffdc3215":"transparent",
               color:view===v?"#ffdc32":"#555",border:"none",
@@ -1215,6 +1215,32 @@ export default function SchoolMarket() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* BOUTIQUE */}
+      {view==="shop" && (
+        <div style={{maxWidth:900,margin:"0 auto",padding:"28px 20px",position:"relative",zIndex:1}}>
+          <div style={{marginBottom:24}}>
+            <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>DÉPENSE TES SCHOOLCOINS</div>
+            <div style={{fontSize:24,fontWeight:"bold"}}>🛒 Boutique</div>
+            <div style={{fontSize:11,color:"#444",marginTop:4}}>
+              Personnalise ton profil avec des cosmétiques visibles dans le classement.
+            </div>
+          </div>
+          {me && (
+            <div style={{background:"#0f0f0f",border:"1px solid #ffdc3230",borderRadius:4,
+              padding:"16px 20px",marginBottom:24,display:"inline-flex",alignItems:"center",gap:12}}>
+              <div style={{fontSize:9,color:"#555",letterSpacing:2}}>TON SOLDE</div>
+              <div style={{fontSize:22,fontWeight:"bold",color:"#ffdc32"}}>
+                💰 {(myUserFresh||me).wallet.toLocaleString()} SC
+              </div>
+            </div>
+          )}
+          <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
+            padding:"40px 20px",textAlign:"center",color:"#2a2a2a",fontSize:13}}>
+            🏗 Articles bientôt disponibles...
+          </div>
         </div>
       )}
 
