@@ -795,6 +795,66 @@ export default function SchoolMarket() {
                 </div>
               )}
             </div>
+            {/* ── HISTORIQUE DU WALLET ── */}
+            {(() => {
+              const notifs = (pu.notifications||[]).filter(n=>n.won!==undefined);
+              if (notifs.length===0) return null;
+              const sorted = [...notifs].sort((a,b)=>a.ts-b.ts);
+              let running = pu.wallet;
+              const points = [];
+              const reversed = [...sorted].reverse();
+              for (const n of reversed) {
+                points.unshift({ts:n.ts, val:running});
+                running -= n.profit;
+              }
+              points.push({ts:Date.now(), val:pu.wallet});
+              const W=480, H=80;
+              const vals = points.map(p=>p.val);
+              const minV = Math.min(...vals);
+              const maxV = Math.max(...vals);
+              const range = maxV-minV || 1;
+              const px = (i) => (i/(points.length-1||1))*W;
+              const py = (v) => H - ((v-minV)/range)*(H-8) - 4;
+              const pathD = points.map((p,i)=>`${i===0?"M":"L"}${px(i).toFixed(1)},${py(p.val).toFixed(1)}`).join(" ");
+              const isUp = pu.wallet >= (points[0]?.val||pu.wallet);
+              const lineColor = isUp ? "#10b981" : "#ef4444";
+              return (
+                <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,marginBottom:16,overflow:"hidden"}}>
+                  <div style={{padding:"12px 16px",borderBottom:"1px solid #1a1a1a",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{fontSize:10,fontWeight:"bold",color:"#444",letterSpacing:2}}>ÉVOLUTION DU WALLET</div>
+                    <div style={{fontSize:11,fontWeight:"bold",color:isUp?"#10b981":"#ef4444"}}>
+                      {isUp?"↗":"↘"} {pu.wallet.toLocaleString()} SC
+                    </div>
+                  </div>
+                  <div style={{padding:"12px 16px 8px"}}>
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block"}}>
+                      {minV<=1000&&maxV>=1000&&(
+                        <line x1={0} y1={py(1000)} x2={W} y2={py(1000)}
+                          stroke="#333" strokeWidth={1} strokeDasharray="4,4"/>
+                      )}
+                      <path d={`${pathD} L${W},${H} L0,${H} Z`} fill={lineColor} fillOpacity={0.08}/>
+                      <path d={pathD} fill="none" stroke={lineColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx={px(points.length-1)} cy={py(pu.wallet)} r={4} fill={lineColor}/>
+                    </svg>
+                  </div>
+                  <div style={{borderTop:"1px solid #1a1a1a"}}>
+                    <div style={{padding:"8px 16px",fontSize:9,color:"#555",letterSpacing:2,fontWeight:"bold"}}>DERNIÈRES TRANSACTIONS</div>
+                    {[...sorted].reverse().slice(0,10).map(n=>(
+                      <div key={n.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px",borderTop:"1px solid #0d0d0d"}}>
+                        <span style={{fontSize:15,flexShrink:0}}>{n.marketEmoji}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#ccc"}}>{n.marketTitle}</div>
+                          <div style={{fontSize:9,color:"#444",marginTop:1}}>Mise : {n.amount} SC · {new Date(n.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}</div>
+                        </div>
+                        <div style={{fontSize:11,fontWeight:"bold",flexShrink:0,color:n.won?"#10b981":"#ef4444"}}>
+                          {n.won?`+${n.profit.toLocaleString()}`:`−${Math.abs(n.profit).toLocaleString()}`} SC
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,overflow:"hidden"}}>
               <div style={{padding:"12px 16px",borderBottom:"1px solid #1a1a1a",fontSize:10,
                 fontWeight:"bold",color:"#444",letterSpacing:2}}>HISTORIQUE DES PARIS</div>
