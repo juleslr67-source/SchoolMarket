@@ -197,7 +197,15 @@ export default function SchoolMarket() {
     if (found.banned) return setAuthErr("Ce compte est banni.");
     if (found.passwordHash && found.passwordHash !== simpleHash(authPw))
       return setAuthErr("Mot de passe incorrect.");
-    setMe(found); setView("markets");
+    // Bonus quotidien
+    const today = new Date().toDateString();
+    let updated = found;
+    if (found.lastBonus !== today) {
+      updated = {...found, wallet: found.wallet + 50, lastBonus: today};
+      saveU(cur.map(u=>u.id===found.id ? updated : u));
+      setTimeout(()=>showToast("🎁 Bonus quotidien : +50 SC !"), 400);
+    }
+    setMe(updated); setView("markets");
     showToast(`Bon retour ${found.pseudo} !`);
   };
 
