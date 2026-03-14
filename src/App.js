@@ -158,6 +158,7 @@ export default function SchoolMarket() {
   const [myRenamReq,  setMyRenamReq]  = useState(false);
   const [myRenamInput,setMyRenamInput]= useState("");
   const [myRenamErr,  setMyRenamErr]  = useState("");
+  const [notifOpen,   setNotifOpen]   = useState(false);
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
 
@@ -289,9 +290,28 @@ export default function SchoolMarket() {
     const totalPool = bets.reduce((s,b)=>s+b.amount,0);
     const winnerStake = winners.reduce((s,b)=>s+b.amount,0);
     let newU = [...usersRef.current];
-    for (const w of winners) {
-      const gain = winnerStake>0 ? Math.round(w.amount/winnerStake*totalPool) : 0;
-      newU = newU.map(u=>u.id===w.userId?{...u,wallet:u.wallet+gain}:u);
+    // Gains + notifications
+    for (const bet of bets.filter(b=>!b.isPenalty)) {
+      const won = bet.side===result;
+      const gain = won && winnerStake>0 ? Math.round(bet.amount/winnerStake*totalPool) : 0;
+      const profit = gain - bet.amount;
+      const notif = {
+        id:`n_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
+        ts: Date.now(),
+        read: false,
+        won,
+        marketTitle: mkt.title,
+        marketEmoji: mkt.emoji,
+        amount: bet.amount,
+        gain: won ? gain : 0,
+        profit: won ? profit : -bet.amount,
+      };
+      newU = newU.map(u => {
+        if (u.id !== bet.userId) return u;
+        const updatedWallet = won ? u.wallet + gain : u.wallet;
+        const notifs = [...(u.notifications||[]), notif].slice(-30); // max 30 notifs
+        return {...u, wallet:updatedWallet, notifications:notifs};
+      });
     }
     saveU(newU);
     saveM(marketsRef.current.map(m=>m.id===marketId?{...m,resolved:true,result,resolvedAt:Date.now()}:m));
@@ -414,6 +434,15 @@ export default function SchoolMarket() {
     showToast(`✅ Pseudo changé : ${oldPseudo} → ${name}`);
   };
 
+  // ── NOTIFS ───────────────────────────────────────────────────────
+  const markNotifsRead = () => {
+    const cur = usersRef.current;
+    const freshMe = cur.find(u=>u.id===me.id)||me;
+    const newMe = {...freshMe, notifications:(freshMe.notifications||[]).map(n=>({...n,read:true}))};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+  };
+
   // ── COMPTE À REBOURS ─────────────────────────────────────────────
   const getCountdown = (deadline) => {
     const diff = deadline - Date.now();
@@ -465,6 +494,7 @@ export default function SchoolMarket() {
   const myBetOn  = mkt=>(mkt.bets||[]).find(b=>b.userId===me?.id);
   const myUserFresh = me ? usersRef.current.find(u=>u.id===me.id)||me : null;
   const pendingRenames = visibleUsers.filter(u=>u.renameRequest);
+  const unreadCount = myUserFresh ? (myUserFresh.notifications||[]).filter(n=>!n.read).length : 0;
 
   if (!loaded) return (
     <div style={{minHeight:"100vh",background:"#0d0d0d",display:"flex",alignItems:"center",
@@ -474,7 +504,8 @@ export default function SchoolMarket() {
   );
 
   return (
-    <div style={{minHeight:"100vh",background:"#0d0d0d",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}>
+    <div style={{minHeight:"100vh",background:"#0d0d0d",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}
+      onClick={()=>setNotifOpen(false)}>
       <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",
         backgroundImage:"linear-gradient(rgba(255,220,50,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,220,50,0.025) 1px,transparent 1px)",
         backgroundSize:"44px 44px"}}/>
@@ -528,6 +559,62 @@ export default function SchoolMarket() {
         <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
           {me ? (
             <>
+            <>
+              {/* Cloche notifs */}
+              <div style={{position:"relative"}}>
+                <button onClick={()=>{setNotifOpen(o=>!o); if(unreadCount>0) markNotifsRead();}}
+                  style={{background:"transparent",border:"1px solid #252525",color:"#ccc",
+                    padding:"5px 9px",borderRadius:2,cursor:"pointer",fontSize:14,
+                    position:"relative"}}>
+                  🔔
+                  {unreadCount>0&&(
+                    <span style={{position:"absolute",top:-4,right:-4,background:"#ef4444",color:"#fff",
+                      fontSize:8,padding:"1px 4px",borderRadius:10,lineHeight:1.4,fontWeight:"bold",
+                      minWidth:14,textAlign:"center"}}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                {notifOpen && (
+                  <div style={{position:"absolute",right:0,top:40,width:300,background:"#111",
+                    border:"1px solid #252525",borderRadius:4,zIndex:300,
+                    boxShadow:"0 8px 32px rgba(0,0,0,0.6)",overflow:"hidden"}}>
+                    <div style={{padding:"10px 14px",borderBottom:"1px solid #1a1a1a",
+                      fontSize:9,color:"#555",letterSpacing:2,fontWeight:"bold"}}>
+                      NOTIFICATIONS
+                    </div>
+                    <div style={{maxHeight:320,overflowY:"auto"}}>
+                      {(myUserFresh?.notifications||[]).length===0 ? (
+                        <div style={{padding:"24px 14px",textAlign:"center",color:"#333",fontSize:11}}>
+                          Aucune notification
+                        </div>
+                      ) : [...(myUserFresh?.notifications||[])].reverse().map(n=>(
+                        <div key={n.id} style={{padding:"10px 14px",borderBottom:"1px solid #0d0d0d",
+                          background:n.read?"transparent":"#ffffff04"}}>
+                          <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                            <span style={{fontSize:16,flexShrink:0}}>{n.marketEmoji}</span>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:10,color:"#ccc",marginBottom:2,
+                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                {n.marketTitle}
+                              </div>
+                              <div style={{fontSize:11,fontWeight:"bold",
+                                color:n.won?"#10b981":"#ef4444"}}>
+                                {n.won
+                                  ? `🎉 Gagné ! +${n.profit.toLocaleString()} SC`
+                                  : `😢 Perdu — ${Math.abs(n.profit).toLocaleString()} SC`}
+                              </div>
+                              <div style={{fontSize:9,color:"#333",marginTop:2}}>
+                                Mise : {n.amount} SC · {new Date(n.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button onClick={()=>{setProfileUser(myUserFresh||me);setView("profile");}}
                 style={{background:"transparent",border:"1px solid #252525",color:"#ccc",
                   padding:"5px 10px",borderRadius:2,cursor:"pointer",fontSize:10,
