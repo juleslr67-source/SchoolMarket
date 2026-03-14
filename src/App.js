@@ -1126,6 +1126,8 @@ export default function SchoolMarket() {
                     const colors=["#94a3b8","#ffdc32","#cd7c2f"];
                     const medals=["🥈","🥇","🥉"];
                     const heights=[130,162,110];
+                    const pColor=u.equipped?.pseudoColor?SHOP_ITEMS.find(s=>s.id===u.equipped.pseudoColor)?.color:null;
+                    const badge=u.equipped?.badge?SHOP_ITEMS.find(s=>s.id===u.equipped.badge):null;
                     return (
                       <div key={u.id} style={{flex:1,background:"#0f0f0f",border:`1px solid ${colors[i]}22`,
                         borderRadius:4,padding:14,textAlign:"center",height:heights[i],
@@ -1135,10 +1137,12 @@ export default function SchoolMarket() {
                         onMouseLeave={e=>e.currentTarget.style.borderColor=`${colors[i]}22`}
                         onClick={()=>{setProfileUser(u);setView("profile");}}>
                         <div style={{fontSize:24,marginBottom:3}}>{u.avatar}</div>
-                        <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                          color:pColor||"inherit",textShadow:pColor?`0 0 8px ${pColor}55`:undefined}}>
                           {u.pseudo}
                           {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",marginLeft:4}}>ADMIN</span>}
                         </div>
+                        {badge&&<div style={{fontSize:8,color:RARITY_COLOR[badge.rarity],marginTop:1}}>{badge.name}</div>}
                         <div style={{fontSize:20,fontWeight:"bold",color:colors[i]}}>{medals[i]}</div>
                         <div style={{fontSize:10,color:"#444",marginTop:3}}>{u.profit>=0?"+":""}{u.profit.toLocaleString()} SC</div>
                       </div>
@@ -1157,32 +1161,41 @@ export default function SchoolMarket() {
                 {leaderboard.map((u,i)=>{
                   const rc={0:"#ffdc32",1:"#94a3b8",2:"#cd7c2f"};
                   const isMe=me?.id===u.id;
+                  const pColor=u.equipped?.pseudoColor?SHOP_ITEMS.find(s=>s.id===u.equipped.pseudoColor)?.color:null;
+                  const badge=u.equipped?.badge?SHOP_ITEMS.find(s=>s.id===u.equipped.badge):null;
+                  const frame=u.equipped?.frame?SHOP_ITEMS.find(s=>s.id===u.equipped.frame):null;
                   return (
                     <div key={u.id} style={{display:"grid",gridTemplateColumns:"44px 1fr 60px 60px 60px 80px",
                       padding:"11px 16px",borderBottom:"1px solid #111",
                       background:isMe?"#ffdc3206":"transparent",
-                      borderLeft:isMe?"3px solid #ffdc32":"3px solid transparent",cursor:"pointer"}}
+                      borderLeft:isMe?"3px solid #ffdc32":"3px solid transparent",
+                      cursor:"pointer",position:"relative"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#ffffff06"}
                       onMouseLeave={e=>e.currentTarget.style.background=isMe?"#ffdc3206":"transparent"}
                       onClick={()=>{setProfileUser(u);setView("profile");}}>
-                      <div style={{fontSize:12,fontWeight:"bold",color:rc[i]||"#444"}}>
+                      {frame&&<div style={{position:"absolute",inset:0,background:frame.frameColor,
+                        opacity:0.1,pointerEvents:"none"}}/>}
+                      <div style={{fontSize:12,fontWeight:"bold",color:rc[i]||"#444",position:"relative",zIndex:1}}>
                         {i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,position:"relative",zIndex:1}}>
                         <span style={{fontSize:16}}>{u.avatar}</span>
                         <div>
                           <div style={{display:"flex",alignItems:"center",gap:5}}>
-                            <span style={{fontSize:12,color:isMe?"#ffdc32":"#ccc",fontWeight:isMe?"bold":"normal"}}>
+                            <span style={{fontSize:12,fontWeight:"bold",
+                              color:pColor||(isMe?"#ffdc32":"#ccc"),
+                              textShadow:pColor?`0 0 8px ${pColor}55`:undefined}}>
                               {u.pseudo}{isMe?" (toi)":""}
                             </span>
                             {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:2}}>ADMIN</span>}
                             {u.banned&&<span style={{marginLeft:4,fontSize:8,color:"#ef4444"}}>BANNI</span>}
                           </div>
+                          {badge&&<div style={{fontSize:9,color:RARITY_COLOR[badge.rarity]}}>{badge.name}</div>}
                         </div>
                       </div>
-                      <div style={{textAlign:"right",color:"#10b981",fontSize:12,fontWeight:"bold"}}>{u.wins}</div>
-                      <div style={{textAlign:"right",color:"#ef4444",fontSize:12,fontWeight:"bold"}}>{u.losses}</div>
-                      <div style={{textAlign:"right",fontSize:11,fontWeight:"bold",color:u.winRate>=50?"#10b981":"#ef4444"}}>{u.winRate}%</div>
-                      <div style={{textAlign:"right",fontSize:12,fontWeight:"bold",color:u.profit>=0?"#10b981":"#ef4444"}}>
+                      <div style={{textAlign:"right",color:"#10b981",fontSize:12,fontWeight:"bold",position:"relative",zIndex:1}}>{u.wins}</div>
+                      <div style={{textAlign:"right",color:"#ef4444",fontSize:12,fontWeight:"bold",position:"relative",zIndex:1}}>{u.losses}</div>
+                      <div style={{textAlign:"right",fontSize:11,fontWeight:"bold",position:"relative",zIndex:1,color:u.winRate>=50?"#10b981":"#ef4444"}}>{u.winRate}%</div>
+                      <div style={{textAlign:"right",fontSize:12,fontWeight:"bold",position:"relative",zIndex:1,color:u.profit>=0?"#10b981":"#ef4444"}}>
                         {u.profit>=0?"+":""}{u.profit.toLocaleString()}</div>
                     </div>
                   );
