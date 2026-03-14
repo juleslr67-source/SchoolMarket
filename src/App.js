@@ -292,7 +292,7 @@ export default function SchoolMarket() {
       newU = newU.map(u=>u.id===w.userId?{...u,wallet:u.wallet+gain}:u);
     }
     saveU(newU);
-    saveM(marketsRef.current.map(m=>m.id===marketId?{...m,resolved:true,result}:m));
+    saveM(marketsRef.current.map(m=>m.id===marketId?{...m,resolved:true,result,resolvedAt:Date.now()}:m));
     const fm = newU.find(u=>u.id===me?.id);
     if (fm) setMe(fm);
     setResolveModal(null);
@@ -420,6 +420,30 @@ export default function SchoolMarket() {
     const t=s.wins+s.losses;
     return{...u,...s,winRate:t>0?Math.round(s.wins/t*100):0,profit:u.wallet-1000};
   }).sort((a,b)=>b.wallet-a.wallet);
+
+  // Meilleur parieur de la semaine
+  const weekAgo = Date.now() - 7*24*60*60*1000;
+  const weeklyMarkets = markets.filter(m=>m.resolved && m.resolvedAt && m.resolvedAt>=weekAgo);
+  const weeklyScores = {};
+  for (const mkt of weeklyMarkets) {
+    for (const bet of (mkt.bets||[]).filter(b=>!b.isPenalty)) {
+      if (!weeklyScores[bet.userId]) weeklyScores[bet.userId]={userId:bet.userId,profit:0,count:0};
+      weeklyScores[bet.userId].count++;
+      if (bet.side===mkt.result) {
+        // gain = ce qu'il a reçu - ce qu'il a misé
+        const totalPool=(mkt.bets||[]).reduce((s,b)=>s+b.amount,0);
+        const winnerStake=(mkt.bets||[]).filter(b=>b.side===mkt.result&&!b.isPenalty).reduce((s,b)=>s+b.amount,0);
+        const gain=winnerStake>0?Math.round(bet.amount/winnerStake*totalPool)-bet.amount:0;
+        weeklyScores[bet.userId].profit+=gain;
+      } else {
+        weeklyScores[bet.userId].profit-=bet.amount;
+      }
+    }
+  }
+  const weeklyBest = Object.values(weeklyScores)
+    .filter(s=>s.count>=3)
+    .sort((a,b)=>b.profit-a.profit)[0] || null;
+  const weeklyBestUser = weeklyBest ? users.find(u=>u.id===weeklyBest.userId) : null;
 
   const filtered = filter==="tous"
     ? markets.filter(m=>!m.resolved)
@@ -712,6 +736,26 @@ export default function SchoolMarket() {
               </div>
             </div>
           </div>
+
+          {/* ── MEILLEUR PARIEUR DE LA SEMAINE ── */}
+          {weeklyBestUser && (
+            <div style={{background:"linear-gradient(90deg,#1a1200,#0d0d0d,#1a1200)",
+              borderBottom:"1px solid #ffdc3220",padding:"10px 20px"}}>
+              <div style={{maxWidth:1080,margin:"0 auto",display:"flex",alignItems:"center",gap:12}}>
+                <div style={{fontSize:9,color:"#ffdc32",letterSpacing:3,fontWeight:"bold",whiteSpace:"nowrap"}}>
+                  ⭐ PARIEUR DE LA SEMAINE
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+                  <span style={{fontSize:20}}>{weeklyBestUser.avatar}</span>
+                  <span style={{fontSize:13,fontWeight:"bold",color:"#ffdc32"}}>{weeklyBestUser.pseudo}</span>
+                  <span style={{fontSize:10,color:"#10b981",fontWeight:"bold"}}>
+                    +{weeklyBest.profit.toLocaleString()} SC cette semaine
+                  </span>
+                  <span style={{fontSize:9,color:"#444"}}>({weeklyBest.count} paris)</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div style={{position:"sticky",top:58,zIndex:90,background:"rgba(13,13,13,0.97)",
             backdropFilter:"blur(12px)",borderBottom:"1px solid #1a1a1a",
