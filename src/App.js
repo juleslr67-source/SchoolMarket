@@ -1285,8 +1285,9 @@ export default function SchoolMarket() {
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <input type="datetime-local" value={draft.deadline}
                   onChange={e=>setDraft(d=>({...d,deadline:e.target.value}))}
-                  style={{flex:1,background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                    padding:"8px 12px",borderRadius:2,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+                  style={{flex:1,background:"#1a1a1a",border:"1px solid #333",color:"#e8e0d0",
+                    padding:"8px 12px",borderRadius:2,fontSize:11,fontFamily:"inherit",outline:"none",
+                    colorScheme:"dark"}}/>
                 {draft.deadline && (
                   <button onClick={()=>setDraft(d=>({...d,deadline:""}))}
                     style={{background:"transparent",border:"none",color:"#555",cursor:"pointer",fontSize:13}}>✕</button>
