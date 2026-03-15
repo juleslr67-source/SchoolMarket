@@ -530,6 +530,20 @@ export default function SchoolMarket() {
     showToast("❌ Article déséquipé.");
   };
 
+  // ── ÉPINGLER MARCHÉ ──────────────────────────────────────────────
+  const pinMarket = (marketId) => {
+    const alreadyPinned = marketsRef.current.find(m=>m.pinned);
+    const mkt = marketsRef.current.find(m=>m.id===marketId);
+    if (!mkt) return;
+    if (mkt.pinned) {
+      saveM(marketsRef.current.map(m=>({...m, pinned:false})));
+      showToast("📌 Marché dépinglé.");
+    } else {
+      saveM(marketsRef.current.map(m=>({...m, pinned:m.id===marketId})));
+      showToast("⭐ Marché épinglé en vedette !");
+    }
+  };
+
   // ── LOTERIE ──────────────────────────────────────────────────────
   const getWeekKey = () => {
     const d = new Date();
@@ -1066,6 +1080,66 @@ export default function SchoolMarket() {
               </div>
             </div>
           </div>
+
+          {/* ── MARCHÉ EN VEDETTE ── */}
+          {(()=>{
+            const featured = markets.find(m=>m.pinned&&!m.resolved);
+            if (!featured) return null;
+            const odds = computeOdds(featured);
+            const myBet = myBetOn(featured);
+            const isMine = featured.creatorId===me?.id;
+            return (
+              <div style={{background:"linear-gradient(135deg,#1a1200,#0d0d0d)",
+                borderBottom:"1px solid #ffd70030",padding:"14px 20px"}}>
+                <div style={{maxWidth:1080,margin:"0 auto"}}>
+                  <div style={{fontSize:8,color:"#ffd700",letterSpacing:3,fontWeight:"bold",marginBottom:8}}>
+                    ⭐ PARI EN VEDETTE
+                  </div>
+                  <div style={{background:"#0f0f0f",border:"2px solid #ffd70040",borderRadius:4,padding:16,
+                    boxShadow:"0 0 20px #ffd70010"}}>
+                    <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
+                      <span style={{fontSize:28}}>{featured.emoji}</span>
+                      <div style={{flex:1,minWidth:200}}>
+                        <div style={{fontSize:14,fontWeight:"bold",marginBottom:6,color:"#fff"}}>
+                          {featured.title}
+                        </div>
+                        <div style={{display:"flex",gap:4,marginBottom:6}}>
+                          <div style={{flex:odds.yesPct,background:"#10b98120",height:6,borderRadius:2,position:"relative",overflow:"hidden"}}>
+                            <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:2}}/>
+                          </div>
+                          <div style={{flex:odds.noPct,background:"#ef444420",height:6,borderRadius:2,position:"relative",overflow:"hidden"}}>
+                            <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:2}}/>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:10}}>
+                          <span style={{color:"#10b981"}}>OUI {odds.yesPct}%</span>
+                          <span style={{color:"#ffd700",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
+                          <span style={{color:"#ef4444"}}>NON {odds.noPct}%</span>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+                        {!myBet && me && !me.banned && !isMine && (
+                          <button onClick={()=>{setBetModal(featured);setBetSide(null);setBetAmount(50);}}
+                            style={{background:"#ffd700",color:"#0d0d0d",border:"none",
+                              padding:"8px 16px",borderRadius:2,cursor:"pointer",
+                              fontSize:10,fontWeight:"bold",fontFamily:"inherit"}}>
+                            → PARIER
+                          </button>
+                        )}
+                        {myBet && (
+                          <div style={{fontSize:10,color:myBet.side==="yes"?"#10b981":"#ef4444",
+                            background:myBet.side==="yes"?"#0a150a":"#1a0505",
+                            padding:"6px 10px",borderRadius:2,border:`1px solid ${myBet.side==="yes"?"#10b98130":"#ef444430"}`}}>
+                            ✓ {myBet.side==="yes"?"OUI":"NON"} · {myBet.amount} SC
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── MEILLEUR PARIEUR DE LA SEMAINE ── */}
           {weeklyBestUser && (
@@ -1789,12 +1863,21 @@ export default function SchoolMarket() {
                         {mkt.result==="yes"?"✅ OUI":"❌ NON"} · RÉSOLU
                       </span>
                     ) : (
-                      <button onClick={()=>setResolveModal(mkt)}
-                        style={{background:"#a855f715",border:"1px solid #a855f730",color:"#a855f7",
-                          padding:"6px 12px",borderRadius:2,cursor:"pointer",fontSize:9,
-                          fontWeight:"bold",fontFamily:"inherit",letterSpacing:1}}>
-                        CLÔTURER
-                      </button>
+                      <>
+                        <button onClick={()=>pinMarket(mkt.id)}
+                          style={{background:mkt.pinned?"#ffd70020":"transparent",
+                            border:`1px solid ${mkt.pinned?"#ffd70050":"#252525"}`,
+                            color:mkt.pinned?"#ffd700":"#555",
+                            padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+                          📌
+                        </button>
+                        <button onClick={()=>setResolveModal(mkt)}
+                          style={{background:"#a855f715",border:"1px solid #a855f730",color:"#a855f7",
+                            padding:"6px 12px",borderRadius:2,cursor:"pointer",fontSize:9,
+                            fontWeight:"bold",fontFamily:"inherit",letterSpacing:1}}>
+                          CLÔTURER
+                        </button>
+                      </>
                     )}
                     <button onClick={()=>setDelConfirm({type:"market",market:mkt})}
                       style={{background:"#ef444410",border:"1px solid #ef444425",color:"#ef4444",
