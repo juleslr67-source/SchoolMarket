@@ -21,6 +21,13 @@ const EMOJIS    = ["🎲","🕐","⚠️","📚","😱","🍟","📢","🎉","�
 
 const RARITY_COLOR = { commun:"#888", rare:"#3b82f6", épique:"#a855f7", légendaire:"#ffd700" };
 
+const MILESTONES = [
+  { threshold:2000,  id:"mile_2k",   name:"🥈 Investisseur",       desc:"A atteint 2 000 SC",   color:"#94a3b8" },
+  { threshold:5000,  id:"mile_5k",   name:"💎 Riche",               desc:"A atteint 5 000 SC",   color:"#22d3ee" },
+  { threshold:10000, id:"mile_10k",  name:"🐺 Loup de Wall Street", desc:"A atteint 10 000 SC",  color:"#ffd700" },
+  { threshold:25000, id:"mile_25k",  name:"🌟 Légende",             desc:"A atteint 25 000 SC",  color:"#a855f7" },
+];
+
 const SHOP_ITEMS = [
   // Couleurs de pseudo
   { id:"color_red",    type:"pseudoColor", name:"Pseudo Écarlate",  desc:"Ton pseudo en rouge",        price:150,  icon:"🔴", color:"#ef4444", rarity:"commun" },
@@ -202,6 +209,7 @@ export default function SchoolMarket() {
   const [myRenamInput,setMyRenamInput]= useState("");
   const [myRenamErr,  setMyRenamErr]  = useState("");
   const [notifOpen,   setNotifOpen]   = useState(false);
+  const [cashprizeAmt,setCashprizeAmt]= useState("500");
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
 
@@ -370,8 +378,26 @@ export default function SchoolMarket() {
       newU = newU.map(u => {
         if (u.id !== bet.userId) return u;
         const updatedWallet = won ? u.wallet + gain : u.wallet;
-        const notifs = [...(u.notifications||[]), notif].slice(-30); // max 30 notifs
-        return {...u, wallet:updatedWallet, notifications:notifs};
+        const notifs = [...(u.notifications||[]), notif].slice(-30);
+        // Vérifier les paliers débloqués
+        const unlockedMilestones = u.unlockedMilestones||[];
+        const newMilestones = [...unlockedMilestones];
+        const milestoneNotifs = [];
+        if (won) {
+          for (const m of MILESTONES) {
+            if (updatedWallet >= m.threshold && !unlockedMilestones.includes(m.id)) {
+              newMilestones.push(m.id);
+              milestoneNotifs.push({
+                id:`n_${Date.now()}_m${m.id}`, ts:Date.now(), read:false,
+                won:true, marketTitle:`Palier ${m.threshold.toLocaleString()} SC atteint !`,
+                marketEmoji:"🏆", amount:0, gain:0, profit:0, isMilestone:true,
+              });
+            }
+          }
+        }
+        return {...u, wallet:updatedWallet,
+          notifications:[...notifs,...milestoneNotifs].slice(-30),
+          unlockedMilestones:newMilestones};
       });
     }
     saveU(newU);
@@ -983,6 +1009,28 @@ export default function SchoolMarket() {
                 </div>
               )}
             </div>
+            {/* ── BADGES DE PALIER ── */}
+            {(pu.unlockedMilestones||[]).length>0 && (
+              <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
+                padding:"14px 18px",marginBottom:16}}>
+                <div style={{fontSize:9,color:"#444",letterSpacing:2,fontWeight:"bold",marginBottom:10}}>
+                  🏆 PALIERS ATTEINTS
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {MILESTONES.filter(m=>(pu.unlockedMilestones||[]).includes(m.id)).map(m=>(
+                    <div key={m.id} style={{background:"#111",border:`1px solid ${m.color}40`,
+                      borderRadius:3,padding:"6px 12px",display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:13}}>{m.name.split(" ")[0]}</span>
+                      <div>
+                        <div style={{fontSize:10,fontWeight:"bold",color:m.color}}>{m.name.slice(m.name.indexOf(" ")+1)}</div>
+                        <div style={{fontSize:8,color:"#444"}}>{m.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ── HISTORIQUE DU WALLET ── */}
             {(() => {
               const notifs = (pu.notifications||[]).filter(n=>n.won!==undefined);
@@ -1850,6 +1898,49 @@ export default function SchoolMarket() {
                     </>
                   );
                 })()}
+              </div>
+
+              {/* Cashprize hebdo */}
+              <div style={{background:"#0f0f0f",border:"1px solid #ffd70030",borderRadius:4,padding:24}}>
+                <div style={{fontSize:10,color:"#ffd700",letterSpacing:2,marginBottom:4,fontWeight:"bold"}}>⭐ CASHPRIZE MEILLEUR PARIEUR</div>
+                <div style={{fontSize:10,color:"#444",marginBottom:16}}>
+                  Distribue une récompense au meilleur parieur de la semaine.
+                  {weeklyBestUser
+                    ? <span style={{color:"#10b981"}}> Actuellement : {weeklyBestUser.avatar} {weeklyBestUser.pseudo} (+{weeklyBest.profit.toLocaleString()} SC)</span>
+                    : <span style={{color:"#333"}}> Aucun éligible cette semaine.</span>}
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input type="number" value={cashprizeAmt} onChange={e=>setCashprizeAmt(e.target.value)}
+                    min={1} style={{width:100,background:"#0d0d0d",border:"1px solid #252525",
+                      color:"#e8e0d0",padding:"8px 12px",borderRadius:2,fontSize:13,
+                      fontFamily:"inherit",outline:"none"}}/>
+                  <span style={{fontSize:11,color:"#444"}}>SC</span>
+                  <button onClick={()=>{
+                    if (!weeklyBestUser) return showToast("Aucun éligible !","err");
+                    const amt = parseInt(cashprizeAmt);
+                    if (!amt||amt<1) return showToast("Montant invalide","err");
+                    const cur = usersRef.current;
+                    const notif = {
+                      id:`n_${Date.now()}`, ts:Date.now(), read:false,
+                      won:true, marketTitle:"⭐ Cashprize meilleur parieur de la semaine !",
+                      marketEmoji:"⭐", amount:0, gain:amt, profit:amt,
+                    };
+                    const newU = cur.map(u=>u.id!==weeklyBestUser.id?u:{
+                      ...u, wallet:u.wallet+amt,
+                      notifications:[...(u.notifications||[]),notif].slice(-30)
+                    });
+                    saveU(newU);
+                    const fm = newU.find(u=>u.id===me?.id);
+                    if (fm) setMe(fm);
+                    showToast(`🎉 ${amt} SC envoyés à ${weeklyBestUser.pseudo} !`);
+                  }} disabled={!weeklyBestUser}
+                    style={{background:weeklyBestUser?"#ffd700":"#1a1a1a",
+                      color:weeklyBestUser?"#0d0d0d":"#444",border:"none",
+                      padding:"8px 16px",borderRadius:2,cursor:weeklyBestUser?"pointer":"not-allowed",
+                      fontWeight:"bold",fontSize:10,fontFamily:"inherit",letterSpacing:1}}>
+                    🏆 ENVOYER LE CASHPRIZE
+                  </button>
+                </div>
               </div>
             </div>
           )}
