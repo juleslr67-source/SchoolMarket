@@ -329,7 +329,7 @@ export default function SchoolMarket() {
     if (!draft.title.trim()) return setDraftErr("Donne un titre à ton marché.");
     if (draft.title.length>120) return setDraftErr("Titre trop long.");
     const activeOwn = markets.filter(m=>m.creatorId===me.id&&!m.resolved).length;
-    if (!isAdmin && activeOwn>=5) return setDraftErr("Max 5 marchés actifs.");
+    if (!isAdmin && activeOwn>=2) return setDraftErr("Max 2 marchés actifs.");
     const newMkt = {
       id:`m_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
       title:draft.title.trim(), category:draft.category, emoji:draft.emoji,
@@ -1202,7 +1202,7 @@ export default function SchoolMarket() {
               <button onClick={()=>setCreateOpen(true)} style={{background:"#ffdc32",color:"#0d0d0d",
                 border:"none",padding:"5px 12px",borderRadius:2,cursor:"pointer",
                 fontWeight:"bold",fontSize:9,fontFamily:"inherit",letterSpacing:1,flexShrink:0}}>
-                + CRÉER ({markets.filter(m=>m.creatorId===me.id&&!m.resolved).length}/5)
+                + CRÉER ({markets.filter(m=>m.creatorId===me.id&&!m.resolved).length}/2)
               </button>
             )}
           </div>
