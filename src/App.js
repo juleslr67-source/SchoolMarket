@@ -1436,7 +1436,7 @@ export default function SchoolMarket() {
                     </div>
                     {!mkt.resolved && (()=>{
                       const ref100 = myBet ? myBet.amount : 100;
-                      const label = myBet ? "Ta mise" : "Ex:";
+                      const label = myBet ? <span style={{color:"#ffdc32"}}>Ta mise</span> : "Ex:";
                       if (myBet) {
                         const gainSide = myBet.side==="yes"
                           ? (odds.yesTotal>0?Math.round(ref100*odds.total/odds.yesTotal):ref100)
@@ -1460,7 +1460,7 @@ export default function SchoolMarket() {
                       );
                     })()}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
+                      <div style={{fontSize:9,color:"#555"}}>par <span style={{color:"#888"}}>{mkt.creatorPseudo}</span></div>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         {mkt.deadline && !mkt.resolved && (
                           <span style={{fontSize:9,fontWeight:"bold",
@@ -1749,7 +1749,7 @@ export default function SchoolMarket() {
                       </div>
                     )}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
+                      <div style={{fontSize:9,color:"#555"}}>par <span style={{color:"#888"}}>{mkt.creatorPseudo}</span></div>
                       {isAdmin && (
                         <button onClick={()=>setDelConfirm({type:"market",market:mkt})}
                           style={{background:"#ef444410",border:"1px solid #ef444425",color:"#ef4444",
