@@ -1430,9 +1430,9 @@ export default function SchoolMarket() {
                       </div>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginBottom:8}}>
-                      <span style={{color:"#10b981",fontWeight:"bold",fontSize:13}}>OUI <span style={{fontSize:12}}>x{odds.yesTotal>0?(odds.total/odds.yesTotal).toFixed(2):"—"}</span></span>
+                      <span style={{color:"#10b981",fontWeight:"bold",fontSize:13}}>OUI <span style={{fontSize:12}}>x{odds.yesTotal>0?(odds.total/odds.yesTotal).toFixed(2):"0"}</span></span>
                       <span style={{color:"#ffdc32",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
-                      <span style={{color:"#ef4444",fontWeight:"bold",fontSize:13}}>NON <span style={{fontSize:12}}>x{odds.noTotal>0?(odds.total/odds.noTotal).toFixed(2):"—"}</span></span>
+                      <span style={{color:"#ef4444",fontWeight:"bold",fontSize:13}}>NON <span style={{fontSize:12}}>x{odds.noTotal>0?(odds.total/odds.noTotal).toFixed(2):"0"}</span></span>
                     </div>
                     {!mkt.resolved && (()=>{
                       const ref100 = myBet ? myBet.amount : 100;
@@ -2271,8 +2271,8 @@ export default function SchoolMarket() {
               {[["yes","✅ OUI","#10b981"],["no","❌ NON","#ef4444"]].map(([s,lbl,c])=>{
                 const betOdds = computeOdds(betModal);
                 const cote = s==="yes"
-                  ? (betOdds.yesTotal>0?(betOdds.total/betOdds.yesTotal).toFixed(2):"—")
-                  : (betOdds.noTotal>0?(betOdds.total/betOdds.noTotal).toFixed(2):"—");
+                  ? (betOdds.yesTotal>0?(betOdds.total/betOdds.yesTotal).toFixed(2):"0")
+                  : (betOdds.noTotal>0?(betOdds.total/betOdds.noTotal).toFixed(2):"0");
                 return (
                   <button key={s} onClick={()=>setBetSide(s)} style={{flex:1,padding:"11px",
                     border:betSide===s?`2px solid ${c}`:"1px solid #252525",
