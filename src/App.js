@@ -28,10 +28,10 @@ const SHOP_ITEMS = [
   { id:"color_green",  type:"pseudoColor", name:"Pseudo Vert Néon", desc:"Ton pseudo en vert fluo",    price:200,  icon:"💚", color:"#4ade80", rarity:"commun" },
   { id:"color_gold",   type:"pseudoColor", name:"Pseudo Doré",      desc:"Ton pseudo brille en or",    price:500,  icon:"✨", color:"#ffd700", rarity:"rare" },
   // Badges
-  { id:"badge_shark",  type:"badge", name:"🦈 Le Shark",    desc:"Prédateur du marché",         price:600,  icon:"🦈", rarity:"rare" },
-  { id:"badge_ghost",  type:"badge", name:"👻 Le Fantôme",  desc:"Mystérieux et insaisissable",  price:400,  icon:"👻", rarity:"commun" },
-  { id:"badge_degen",  type:"badge", name:"🎰 Le Dégénéré", desc:"Tu miseras jusqu'au bout",     price:300,  icon:"🎰", rarity:"commun" },
-  { id:"badge_legend", type:"badge", name:"👑 La Légende",  desc:"Statut de légende du lycée",   price:3000, icon:"👑", rarity:"légendaire" },
+  { id:"badge_tasty",  type:"badge", name:"🍗 TASTY CROUSTY92", desc:"Le classique du lycée",           price:300,  icon:"🍗", rarity:"commun" },
+  { id:"badge_puff",   type:"badge", name:"🚬 puffeurXtrem",    desc:"Toujours en train de souffler",    price:400,  icon:"🚬", rarity:"commun" },
+  { id:"badge_poseur", type:"badge", name:"🍆 poseurcouillu",   desc:"On sait tous qui c'est",           price:600,  icon:"🍆", rarity:"rare" },
+  { id:"badge_goat",   type:"badge", name:"⚡ Goat67",          desc:"Le meilleur. Point.",              price:3000, icon:"⚡", rarity:"légendaire" },
   // Cadres
   { id:"frame_fire",   type:"frame", name:"Cadre Feu",      desc:"Bordure rouge flamboyante",    price:500,  icon:"🔥", frameColor:"linear-gradient(135deg,#ef4444,#f97316)", rarity:"rare" },
   { id:"frame_ice",    type:"frame", name:"Cadre Glace",    desc:"Bordure cristal bleu glacé",   price:500,  icon:"❄️", frameColor:"linear-gradient(135deg,#22d3ee,#6366f1)", rarity:"rare" },
