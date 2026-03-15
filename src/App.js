@@ -120,29 +120,36 @@ export default function SchoolMarket() {
   const [markets, setMarkets] = useState([]);
   const [me,      setMe]      = useState(null);
   const [loaded,  setLoaded]  = useState(false);
+  const [lottery, setLottery] = useState({pool:0, participants:[], week:""});
   const usersRef   = useRef([]);
   const marketsRef = useRef([]);
+  const lotteryRef = useRef({pool:0, participants:[], week:""});
 
   const syncU = (u) => { const a=u?(Array.isArray(u)?u:Object.values(u)):[];  setUsers(a);   usersRef.current=a; };
   const syncM = (m) => { const a=m?(Array.isArray(m)?m:Object.values(m)):[];  setMarkets(a); marketsRef.current=a; };
+  const syncL = (l) => { const d=l||{pool:0,participants:[],week:""}; setLottery(d); lotteryRef.current=d; };
   const saveU = (u) => { syncU(u); fbSet("users",   u); };
   const saveM = (m) => { syncM(m); fbSet("markets", m); };
+  const saveL = (l) => { syncL(l); fbSet("lottery", l); };
 
   useEffect(() => {
     if (firebaseOk) {
       const u1 = fbListen("users",   d => { syncU(d); setLoaded(true); });
       const u2 = fbListen("markets", d => syncM(d));
-      return () => { u1(); u2(); };
+      const u3 = fbListen("lottery", d => syncL(d));
+      return () => { u1(); u2(); u3(); };
     } else {
       try {
         syncU(JSON.parse(localStorage.getItem("sm_users")||"[]"));
         syncM(JSON.parse(localStorage.getItem("sm_markets")||"[]"));
+        syncL(JSON.parse(localStorage.getItem("sm_lottery")||"null"));
       } catch {}
       setLoaded(true);
     }
   }, []);
   useEffect(() => { if (!firebaseOk) localStorage.setItem("sm_users",   JSON.stringify(users));   }, [users]);
   useEffect(() => { if (!firebaseOk) localStorage.setItem("sm_markets", JSON.stringify(markets)); }, [markets]);
+  useEffect(() => { if (!firebaseOk) localStorage.setItem("sm_lottery", JSON.stringify(lottery)); }, [lottery]);
 
   const isAdmin = me?.pseudo === ADMIN_PSEUDO;
 
@@ -505,6 +512,59 @@ export default function SchoolMarket() {
     saveU(cur.map(u=>u.id===me.id?newMe:u));
     setMe(newMe);
     showToast("❌ Article déséquipé.");
+  };
+
+  // ── LOTERIE ──────────────────────────────────────────────────────
+  const getWeekKey = () => {
+    const d = new Date();
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    return `${d.getFullYear()}-W${week}`;
+  };
+
+  const buyLotteryTicket = () => {
+    if (!me) return setView("auth");
+    const cur = usersRef.current;
+    const freshMe = cur.find(u=>u.id===me.id)||me;
+    if (freshMe.wallet < 50) return showToast("Pas assez de SC !","err");
+    const weekKey = getWeekKey();
+    const lot = lotteryRef.current;
+    const participants = lot.participants||[];
+    if (lot.week===weekKey && participants.find(p=>p.userId===me.id))
+      return showToast("Tu as déjà un ticket cette semaine !","err");
+    // Reset si nouvelle semaine
+    const newParticipants = lot.week===weekKey
+      ? [...participants, {userId:me.id, pseudo:me.pseudo}]
+      : [{userId:me.id, pseudo:me.pseudo}];
+    const newPool = lot.week===weekKey ? (lot.pool||0)+50 : 50;
+    saveL({pool:newPool, participants:newParticipants, week:weekKey});
+    const newMe = {...freshMe, wallet:freshMe.wallet-50};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    showToast(`🎟 Ticket acheté ! Cagnotte : ${newPool} SC`);
+  };
+
+  const drawLottery = () => {
+    const lot = lotteryRef.current;
+    const participants = lot.participants||[];
+    if (participants.length===0) return showToast("Aucun participant !","err");
+    const winner = participants[Math.floor(Math.random()*participants.length)];
+    const cur = usersRef.current;
+    const notif = {
+      id:`n_${Date.now()}`, ts:Date.now(), read:false,
+      won:true, marketTitle:"🎰 Loterie hebdomadaire",
+      marketEmoji:"🎰", amount:50, gain:lot.pool, profit:lot.pool-50,
+    };
+    const newU = cur.map(u=>{
+      if (u.id!==winner.userId) return u;
+      return {...u, wallet:u.wallet+lot.pool,
+        notifications:[...(u.notifications||[]), notif].slice(-30)};
+    });
+    saveU(newU);
+    saveL({pool:0, participants:[], week:""});
+    const fm = newU.find(u=>u.id===me?.id);
+    if (fm) setMe(fm);
+    showToast(`🎉 ${winner.pseudo} remporte ${lot.pool} SC !`);
   };
 
   // ── NOTIFS ───────────────────────────────────────────────────────
@@ -997,6 +1057,47 @@ export default function SchoolMarket() {
             </div>
           )}
 
+          {/* ── LOTERIE HEBDOMADAIRE ── */}
+          {(()=>{
+            const weekKey = getWeekKey();
+            const lot = lottery;
+            const participants = lot.participants||[];
+            const alreadyIn = me && lot.week===weekKey && participants.find(p=>p.userId===me.id);
+            return (
+              <div style={{background:"linear-gradient(90deg,#0a0a1a,#0d0d0d,#0a0a1a)",
+                borderBottom:"1px solid #6366f130",padding:"10px 20px"}}>
+                <div style={{maxWidth:1080,margin:"0 auto",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <div style={{fontSize:9,color:"#6366f1",letterSpacing:3,fontWeight:"bold",whiteSpace:"nowrap"}}>
+                    🎰 LOTERIE DE LA SEMAINE
+                  </div>
+                  <div style={{flex:1,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:13,fontWeight:"bold",color:"#ffdc32"}}>
+                      💰 {(lot.week===weekKey?lot.pool:0).toLocaleString()} SC en jeu
+                    </span>
+                    <span style={{fontSize:10,color:"#444"}}>
+                      {lot.week===weekKey?participants.length:0} participant{participants.length>1?"s":""}
+                    </span>
+                    {alreadyIn && (
+                      <span style={{fontSize:9,color:"#10b981",background:"#0a150a",
+                        padding:"2px 8px",borderRadius:2,border:"1px solid #10b98130"}}>
+                        🎟 Tu as ton ticket !
+                      </span>
+                    )}
+                  </div>
+                  {!alreadyIn && (
+                    <button onClick={buyLotteryTicket}
+                      style={{background:"#6366f1",color:"#fff",border:"none",
+                        padding:"5px 14px",borderRadius:2,cursor:"pointer",
+                        fontSize:9,fontWeight:"bold",fontFamily:"inherit",
+                        letterSpacing:1,flexShrink:0,whiteSpace:"nowrap"}}>
+                      🎟 Ticket — 50 SC
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           <div style={{position:"sticky",top:58,zIndex:90,background:"rgba(13,13,13,0.97)",
             backdropFilter:"blur(12px)",borderBottom:"1px solid #1a1a1a",
             padding:"0 20px",display:"flex",gap:4,alignItems:"center",height:44,overflowX:"auto"}}>
@@ -1475,7 +1576,7 @@ export default function SchoolMarket() {
             <div style={{fontSize:24,fontWeight:"bold"}}>👑 Admin Panel</div>
           </div>
           <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid #1a1a1a",paddingBottom:12}}>
-            {[["markets","📊 Marchés"],["users","👥 Joueurs"],["renames","✏️ Pseudos"+(pendingRenames.length>0?` (${pendingRenames.length})`:"")]].map(([t,lbl])=>(
+            {[["markets","📊 Marchés"],["users","👥 Joueurs"],["renames","✏️ Pseudos"+(pendingRenames.length>0?` (${pendingRenames.length})`:"")],["lottery","🎰 Loterie"]].map(([t,lbl])=>(
               <button key={t} onClick={()=>setAdminTab(t)} style={{
                 background:adminTab===t?"#a855f715":"transparent",color:adminTab===t?"#a855f7":"#444",
                 border:adminTab===t?"1px solid #a855f730":"1px solid transparent",
@@ -1483,6 +1584,57 @@ export default function SchoolMarket() {
                 fontFamily:"inherit",letterSpacing:1}}>{lbl}</button>
             ))}
           </div>
+
+          {adminTab==="lottery" && (
+            <div>
+              <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:24,marginBottom:16}}>
+                <div style={{fontSize:10,color:"#555",letterSpacing:2,marginBottom:16,fontWeight:"bold"}}>LOTERIE EN COURS</div>
+                {(()=>{
+                  const weekKey = getWeekKey();
+                  const lot = lottery;
+                  const participants = lot.participants||[];
+                  const active = lot.week===weekKey && participants.length>0;
+                  return (
+                    <>
+                      <div style={{display:"flex",gap:20,marginBottom:16,flexWrap:"wrap"}}>
+                        <div>
+                          <div style={{fontSize:8,color:"#444",letterSpacing:2,marginBottom:4}}>CAGNOTTE</div>
+                          <div style={{fontSize:22,fontWeight:"bold",color:"#ffdc32"}}>
+                            💰 {active?lot.pool:0} SC
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:8,color:"#444",letterSpacing:2,marginBottom:4}}>PARTICIPANTS</div>
+                          <div style={{fontSize:22,fontWeight:"bold",color:"#ccc"}}>
+                            {active?participants.length:0} joueur{participants.length>1?"s":""}
+                          </div>
+                        </div>
+                      </div>
+                      {active && (
+                        <div style={{marginBottom:16}}>
+                          <div style={{fontSize:8,color:"#444",letterSpacing:2,marginBottom:8}}>LISTE</div>
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                            {participants.map(p=>(
+                              <span key={p.userId} style={{fontSize:10,background:"#1a1a1a",
+                                padding:"3px 8px",borderRadius:2,color:"#ccc"}}>{p.pseudo}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <button onClick={drawLottery} disabled={!active}
+                        style={{background:active?"#ffdc32":"#1a1a1a",color:active?"#0d0d0d":"#444",
+                          border:"none",padding:"10px 20px",borderRadius:2,
+                          cursor:active?"pointer":"not-allowed",
+                          fontWeight:"bold",fontSize:11,fontFamily:"inherit",letterSpacing:1}}>
+                        🎰 LANCER LE TIRAGE
+                      </button>
+                      {!active && <div style={{fontSize:10,color:"#333",marginTop:8}}>Aucun participant cette semaine.</div>}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
 
           {adminTab==="markets" && (
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
