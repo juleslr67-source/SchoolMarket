@@ -1442,7 +1442,6 @@ export default function SchoolMarket() {
                           color:"#333",marginBottom:10,padding:"5px 8px",
                           background:"#0a0a0a",borderRadius:2}}>
                           <span>✅ {label} {ref100} SC → <span style={{color:"#10b981",fontWeight:"bold"}}>{odds.yesTotal>0?Math.round(ref100*odds.total/odds.yesTotal):ref100} SC</span></span>
-                          <span style={{color:"#333"}}>si OUI gagne</span>
                           <span>❌ {label} {ref100} SC → <span style={{color:"#ef4444",fontWeight:"bold"}}>{odds.noTotal>0?Math.round(ref100*odds.total/odds.noTotal):ref100} SC</span></span>
                         </div>
                       );
