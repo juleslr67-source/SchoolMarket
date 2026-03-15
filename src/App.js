@@ -1434,15 +1434,19 @@ export default function SchoolMarket() {
                       <span style={{color:"#ffdc32",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
                       <span style={{color:"#ef4444",fontWeight:"bold",fontSize:13}}>NON <span style={{fontSize:12}}>x{odds.noTotal>0?(odds.total/odds.noTotal).toFixed(2):"—"}</span></span>
                     </div>
-                    {!mkt.resolved && (
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,
-                        color:"#333",marginBottom:10,padding:"5px 8px",
-                        background:"#0a0a0a",borderRadius:2}}>
-                        <span>✅ 100 SC → <span style={{color:"#10b981",fontWeight:"bold"}}>{odds.yesTotal>0?Math.round(100*odds.total/odds.yesTotal):100} SC</span></span>
-                        <span style={{color:"#444"}}>si OUI gagne</span>
-                        <span>❌ 100 SC → <span style={{color:"#ef4444",fontWeight:"bold"}}>{odds.noTotal>0?Math.round(100*odds.total/odds.noTotal):100} SC</span></span>
-                      </div>
-                    )}
+                    {!mkt.resolved && (()=>{
+                      const ref100 = myBet ? myBet.amount : 100;
+                      const label = myBet ? "Ta mise" : "Ex:";
+                      return (
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:9,
+                          color:"#333",marginBottom:10,padding:"5px 8px",
+                          background:"#0a0a0a",borderRadius:2}}>
+                          <span>✅ {label} {ref100} SC → <span style={{color:"#10b981",fontWeight:"bold"}}>{odds.yesTotal>0?Math.round(ref100*odds.total/odds.yesTotal):ref100} SC</span></span>
+                          <span style={{color:"#333"}}>si OUI gagne</span>
+                          <span>❌ {label} {ref100} SC → <span style={{color:"#ef4444",fontWeight:"bold"}}>{odds.noTotal>0?Math.round(ref100*odds.total/odds.noTotal):ref100} SC</span></span>
+                        </div>
+                      );
+                    })()}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
