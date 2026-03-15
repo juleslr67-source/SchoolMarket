@@ -650,6 +650,11 @@ export default function SchoolMarket() {
     .filter(s=>s.count>=3)
     .sort((a,b)=>b.profit-a.profit)[0] || null;
   const weeklyBestUser = weeklyBest ? users.find(u=>u.id===weeklyBest.userId) : null;
+  const weeklyWorst = Object.values(weeklyScores)
+    .filter(s=>s.count>=3)
+    .sort((a,b)=>a.profit-b.profit)[0] || null;
+  const weeklyWorstUser = weeklyWorst && weeklyWorst.userId!==weeklyBest?.userId
+    ? users.find(u=>u.id===weeklyWorst.userId) : null;
 
   const filtered = filter==="tous"
     ? markets.filter(m=>!m.resolved)
@@ -1141,22 +1146,38 @@ export default function SchoolMarket() {
             );
           })()}
 
-          {/* ── MEILLEUR PARIEUR DE LA SEMAINE ── */}
-          {weeklyBestUser && (
-            <div style={{background:"linear-gradient(90deg,#1a1200,#0d0d0d,#1a1200)",
-              borderBottom:"1px solid #ffdc3220",padding:"10px 20px"}}>
-              <div style={{maxWidth:1080,margin:"0 auto",display:"flex",alignItems:"center",gap:12}}>
-                <div style={{fontSize:9,color:"#ffdc32",letterSpacing:3,fontWeight:"bold",whiteSpace:"nowrap"}}>
-                  ⭐ PARIEUR DE LA SEMAINE
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
-                  <span style={{fontSize:20}}>{weeklyBestUser.avatar}</span>
-                  <span style={{fontSize:13,fontWeight:"bold",color:"#ffdc32"}}>{weeklyBestUser.pseudo}</span>
-                  <span style={{fontSize:10,color:"#10b981",fontWeight:"bold"}}>
-                    +{weeklyBest.profit.toLocaleString()} SC cette semaine
-                  </span>
-                  <span style={{fontSize:9,color:"#444"}}>({weeklyBest.count} paris)</span>
-                </div>
+          {/* ── MEILLEUR / PIRE PARIEUR DE LA SEMAINE ── */}
+          {(weeklyBestUser || weeklyWorstUser) && (
+            <div style={{background:"#0d0d0d",borderBottom:"1px solid #1a1a1a",padding:"10px 20px"}}>
+              <div style={{maxWidth:1080,margin:"0 auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+                {weeklyBestUser && (
+                  <div style={{flex:1,minWidth:220,background:"#0a1a0a",border:"1px solid #10b98130",
+                    borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:9,color:"#10b981",letterSpacing:2,fontWeight:"bold",whiteSpace:"nowrap"}}>
+                      ⭐ MEILLEUR PARIEUR
+                    </div>
+                    <span style={{fontSize:18}}>{weeklyBestUser.avatar}</span>
+                    <span style={{fontSize:12,fontWeight:"bold",color:"#10b981"}}>{weeklyBestUser.pseudo}</span>
+                    <span style={{fontSize:10,color:"#10b981",fontWeight:"bold"}}>
+                      +{weeklyBest.profit.toLocaleString()} SC
+                    </span>
+                    <span style={{fontSize:9,color:"#444"}}>({weeklyBest.count} paris)</span>
+                  </div>
+                )}
+                {weeklyWorstUser && (
+                  <div style={{flex:1,minWidth:220,background:"#1a0505",border:"1px solid #ef444430",
+                    borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:9,color:"#ef4444",letterSpacing:2,fontWeight:"bold",whiteSpace:"nowrap"}}>
+                      🤡 PIRE PARIEUR
+                    </div>
+                    <span style={{fontSize:18}}>{weeklyWorstUser.avatar}</span>
+                    <span style={{fontSize:12,fontWeight:"bold",color:"#ef4444"}}>{weeklyWorstUser.pseudo}</span>
+                    <span style={{fontSize:10,color:"#ef4444",fontWeight:"bold"}}>
+                      {weeklyWorst.profit.toLocaleString()} SC
+                    </span>
+                    <span style={{fontSize:9,color:"#444"}}>({weeklyWorst.count} paris)</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1374,6 +1395,31 @@ export default function SchoolMarket() {
               </div>
             );
           })()}
+
+          {/* Meilleur / Pire de la semaine dans le classement */}
+          {(weeklyBestUser || weeklyWorstUser) && (
+            <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+              {weeklyBestUser && (
+                <div style={{flex:1,minWidth:200,background:"#0a1a0a",border:"1px solid #10b98130",
+                  borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:9,color:"#10b981",letterSpacing:2,fontWeight:"bold",whiteSpace:"nowrap"}}>⭐ MEILLEUR</span>
+                  <span style={{fontSize:16}}>{weeklyBestUser.avatar}</span>
+                  <span style={{fontSize:12,fontWeight:"bold",color:"#10b981"}}>{weeklyBestUser.pseudo}</span>
+                  <span style={{fontSize:10,color:"#10b981",marginLeft:"auto"}}>+{weeklyBest.profit.toLocaleString()} SC</span>
+                </div>
+              )}
+              {weeklyWorstUser && (
+                <div style={{flex:1,minWidth:200,background:"#1a0505",border:"1px solid #ef444430",
+                  borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:9,color:"#ef4444",letterSpacing:2,fontWeight:"bold",whiteSpace:"nowrap"}}>🤡 PIRE</span>
+                  <span style={{fontSize:16}}>{weeklyWorstUser.avatar}</span>
+                  <span style={{fontSize:12,fontWeight:"bold",color:"#ef4444"}}>{weeklyWorstUser.pseudo}</span>
+                  <span style={{fontSize:10,color:"#ef4444",marginLeft:"auto"}}>{weeklyWorst.profit.toLocaleString()} SC</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {leaderboard.length===0 ? (
             <div style={{textAlign:"center",color:"#333",padding:"60px 0",fontSize:13}}>
               Aucun joueur inscrit.
