@@ -722,6 +722,101 @@ export default function SchoolMarket() {
     </div>
   );
 
+  // Mur de connexion — accès interdit sans compte
+  if (!me) return (
+    <div style={{minHeight:"100vh",background:"#0d0d0d",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}>
+      <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",
+        backgroundImage:"linear-gradient(rgba(255,220,50,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,220,50,0.025) 1px,transparent 1px)",
+        backgroundSize:"44px 44px"}}/>
+      {toast && (
+        <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,
+          background:toast.type==="err"?"#1a0505":"#0a150a",
+          border:`1px solid ${toast.type==="err"?"#ef4444":"#10b981"}`,
+          color:toast.type==="err"?"#ef4444":"#10b981",
+          padding:"10px 20px",borderRadius:2,fontSize:11,fontWeight:"bold",
+          letterSpacing:1,whiteSpace:"nowrap",boxShadow:"0 4px 20px rgba(0,0,0,0.5)"}}>
+          {toast.msg}
+        </div>
+      )}
+      <div style={{maxWidth:400,margin:"0 auto",padding:"60px 20px",position:"relative",zIndex:1}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:28,fontWeight:"bold",letterSpacing:3,color:"#ffdc32",marginBottom:6}}>
+            SM<span style={{color:"#e8e0d0"}}>.</span>
+          </div>
+          <div style={{fontSize:11,color:"#444",letterSpacing:2}}>MARCHÉ DE PRÉDICTION SCOLAIRE</div>
+        </div>
+        <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:28}}>
+          <div style={{display:"flex",gap:2,marginBottom:24}}>
+            {[["login","CONNEXION"],["register","INSCRIPTION"]].map(([m,lbl])=>(
+              <button key={m} onClick={()=>{setAuthMode(m);setAuthErr("");}}
+                style={{flex:1,padding:"8px",border:"none",borderRadius:2,cursor:"pointer",
+                  fontWeight:"bold",fontSize:9,fontFamily:"inherit",letterSpacing:1,
+                  background:authMode===m?"#ffdc32":"#1a1a1a",color:authMode===m?"#0d0d0d":"#444"}}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+          {authMode==="register" && (
+            <Field label="AVATAR">
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {AVATARS.map(a=>(
+                  <button key={a} onClick={()=>setAuthAvatar(a)} style={{
+                    fontSize:18,background:authAvatar===a?"#ffdc3215":"transparent",
+                    border:authAvatar===a?"2px solid #ffdc32":"2px solid transparent",
+                    borderRadius:4,padding:4,cursor:"pointer"}}>{a}</button>
+                ))}
+              </div>
+            </Field>
+          )}
+          <Field label="PSEUDO">
+            <input value={authPseudo} onChange={e=>setAuthPseudo(e.target.value)}
+              placeholder="Ton pseudo..."
+              style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
+                padding:"10px 12px",borderRadius:2,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+          </Field>
+          <Field label="MOT DE PASSE">
+            <PwField value={authPw} onChange={e=>setAuthPw(e.target.value)}/>
+          </Field>
+          {authMode==="register" && (
+            <Field label="CONFIRMER MOT DE PASSE">
+              <PwField value={authPw2} onChange={e=>setAuthPw2(e.target.value)} placeholder="Répète ton mot de passe"/>
+            </Field>
+          )}
+          {authErr && <div style={{color:"#ef4444",fontSize:11,marginBottom:12,padding:"8px 12px",background:"#1a0505",borderRadius:2}}>{authErr}</div>}
+          <button onClick={authMode==="login"?handleLogin:handleRegister}
+            style={{...S.btn("#ffdc32","#0d0d0d")}}>
+            {authMode==="login"?"→ SE CONNECTER":"→ CRÉER MON COMPTE"}
+          </button>
+          {authMode==="login" && (
+            <div style={{marginTop:12,textAlign:"center",fontSize:10,color:"#333"}}>
+              Admin ?{" "}
+              <span onClick={()=>setAdminPwModal(true)}
+                style={{color:"#a855f7",cursor:"pointer",textDecoration:"underline"}}>
+                Connexion admin
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Modal admin pw */}
+      {adminPwModal && (
+        <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
+          backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:4,padding:28,maxWidth:360,width:"100%"}}>
+            <div style={{fontSize:14,fontWeight:"bold",color:"#a855f7",marginBottom:16}}>👑 Connexion Admin</div>
+            <PwField value={adminPwInput} onChange={e=>setAdminPwInput(e.target.value)} placeholder="Mot de passe admin..."/>
+            {adminPwErr&&<div style={{color:"#ef4444",fontSize:11,margin:"8px 0",padding:"6px 10px",background:"#1a0505",borderRadius:2}}>{adminPwErr}</div>}
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button onClick={()=>{setAdminPwModal(false);setAdminPwInput("");setAdminPwErr("");}}
+                style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>Annuler</button>
+              <button onClick={handleAdminLogin} style={{...S.btn("#a855f7","#fff",{flex:1})}}>→ ENTRER</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{minHeight:"100vh",background:"#0d0d0d",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}
       onClick={()=>setNotifOpen(false)}>
@@ -1335,9 +1430,9 @@ export default function SchoolMarket() {
                       </div>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginBottom:12}}>
-                      <span style={{color:"#10b981"}}>OUI {odds.yesPct}%</span>
+                      <span style={{color:"#10b981"}}>OUI {odds.yesPct}% <span style={{color:"#10b98199",fontSize:9}}>x{odds.yesTotal>0?(odds.total/odds.yesTotal).toFixed(2):"—"}</span></span>
                       <span style={{color:"#ffdc32",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
-                      <span style={{color:"#ef4444"}}>NON {odds.noPct}%</span>
+                      <span style={{color:"#ef4444"}}>NON {odds.noPct}% <span style={{color:"#ef444499",fontSize:9}}>x{odds.noTotal>0?(odds.total/odds.noTotal).toFixed(2):"—"}</span></span>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
@@ -2178,8 +2273,26 @@ export default function SchoolMarket() {
                   color:"#555",padding:"0 8px",borderRadius:2,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0}}>{v}</button>
               ))}
             </div>
-            {!isAdmin && <div style={{fontSize:9,color:"#333",marginBottom:16}}>Solde : {me?.wallet?.toLocaleString()} SC</div>}
-            {isAdmin && <div style={{fontSize:9,color:"#a855f7",marginBottom:16}}>Solde admin : {me?.wallet?.toLocaleString()} SC 👑</div>}
+            {!isAdmin && <div style={{fontSize:9,color:"#333",marginBottom:8}}>Solde : {me?.wallet?.toLocaleString()} SC</div>}
+            {isAdmin && <div style={{fontSize:9,color:"#a855f7",marginBottom:8}}>Solde admin : {me?.wallet?.toLocaleString()} SC 👑</div>}
+            {betSide && betAmount && parseInt(betAmount)>=10 && betModal && (()=>{
+              const odds = computeOdds(betModal);
+              const amt = parseInt(betAmount)||0;
+              const sideTotal = betSide==="yes" ? odds.yesTotal : odds.noTotal;
+              const newSideTotal = sideTotal + amt;
+              const newTotal = odds.total + amt;
+              const cote = newSideTotal>0 ? newTotal/newSideTotal : 1;
+              const gain = Math.round(amt * cote);
+              const profit = gain - amt;
+              return (
+                <div style={{background:"#0a150a",border:"1px solid #10b98130",borderRadius:2,
+                  padding:"8px 12px",marginBottom:12,fontSize:10}}>
+                  <span style={{color:"#444"}}>Gain potentiel : </span>
+                  <span style={{color:"#10b981",fontWeight:"bold"}}>{gain.toLocaleString()} SC</span>
+                  <span style={{color:"#10b98180"}}> (+{profit.toLocaleString()} SC · x{cote.toFixed(2)})</span>
+                </div>
+              );
+            })()}
             <button onClick={placeBet} disabled={!betSide} style={{...S.btn(
               betSide?"#ffdc32":"#1a1a1a", betSide?"#0d0d0d":"#444",
               {cursor:betSide?"pointer":"not-allowed"})}}>
