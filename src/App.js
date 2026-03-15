@@ -221,10 +221,20 @@ export default function SchoolMarket() {
     const today = new Date().toDateString();
     let updated = found;
     if (found.lastBonus !== today) {
-      updated = {...found, wallet: found.wallet + 50, lastBonus: today};
-      saveU(cur.map(u=>u.id===found.id ? updated : u));
+      updated = {...updated, wallet: updated.wallet + 50, lastBonus: today};
       setTimeout(()=>showToast("🎁 Bonus quotidien : +50 SC !"), 400);
     }
+    // Remise en jeu (crédit)
+    if (updated.wallet < 100 && !updated.debt) {
+      updated = {...updated, wallet: updated.wallet + 200, debt: 200};
+      setTimeout(()=>showToast("💳 Crédit de 200 SC accordé ! À rembourser.", "err"), 800);
+    }
+    // Remboursement automatique si wallet >= 500 et dette en cours
+    if (updated.debt && updated.wallet >= 500) {
+      updated = {...updated, wallet: updated.wallet - updated.debt, debt: 0};
+      setTimeout(()=>showToast("✅ Crédit de 200 SC remboursé !"), 800);
+    }
+    saveU(cur.map(u=>u.id===found.id ? updated : u));
     setMe(updated); setView("markets");
     showToast(`Bon retour ${found.pseudo} !`);
   };
@@ -787,6 +797,13 @@ export default function SchoolMarket() {
                   <div style={{fontSize:22,fontWeight:"bold",color:"#ffdc32",marginTop:6}}>
                     {pu.wallet.toLocaleString()} SC
                   </div>
+                  {pu.debt>0 && (
+                    <div style={{fontSize:10,color:"#ef4444",marginTop:4,padding:"4px 10px",
+                      background:"#1a0505",borderRadius:2,border:"1px solid #ef444430",
+                      display:"inline-flex",alignItems:"center",gap:6}}>
+                      💳 Crédit en cours : {pu.debt} SC — remboursé automatiquement à 500 SC
+                    </div>
+                  )}
                   <div style={{display:"flex",gap:16,marginTop:10,flexWrap:"wrap"}}>
                     {[["🏆",stats.wins,"Victoires","#10b981"],["💀",stats.losses,"Défaites","#ef4444"],
                       ["📊",total>0?Math.round(stats.wins/total*100)+"%":"—","Win rate","#ffdc32"],
