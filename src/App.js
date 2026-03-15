@@ -679,7 +679,7 @@ export default function SchoolMarket() {
           SM<span style={{color:"#e8e0d0"}}>.</span>
         </div>
         <nav style={{display:"flex",gap:2,flex:1,overflow:"auto"}}>
-          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"],["shop","🛒 Boutique"]].map(([v,lbl])=>(
+          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"],["shop","🛒 Boutique"],["stats","📈 Stats"]].map(([v,lbl])=>(
             <button key={v} onClick={()=>setView(v)} style={{
               background:view===v?"#ffdc3215":"transparent",
               color:view===v?"#ffdc32":"#555",border:"none",
@@ -1598,6 +1598,109 @@ export default function SchoolMarket() {
           ))}
         </div>
       )}
+
+      {/* STATS GLOBALES */}
+      {view==="stats" && (()=>{
+        const players = users.filter(u=>!u.isAdmin&&!u.banned);
+        const resolvedMkts = markets.filter(m=>m.resolved);
+        const allBets = markets.flatMap(m=>(m.bets||[]).filter(b=>!b.isPenalty));
+
+        // Économie
+        const totalSC = players.reduce((s,u)=>s+u.wallet,0);
+        const totalMise = allBets.reduce((s,b)=>s+b.amount,0);
+        const totalGains = resolvedMkts.reduce((s,m)=>{
+          const pool = (m.bets||[]).reduce((a,b)=>a+b.amount,0);
+          return s+pool;
+        },0);
+        const avgBet = allBets.length>0?Math.round(totalMise/allBets.length):0;
+
+        // Marchés
+        const mostPopular = [...markets].sort((a,b)=>{
+          const aTotal=(a.bets||[]).reduce((s,b)=>s+b.amount,0);
+          const bTotal=(b.bets||[]).reduce((s,b)=>s+b.amount,0);
+          return bTotal-aTotal;
+        })[0]||null;
+        const mostBettors = [...markets].sort((a,b)=>
+          (b.bets||[]).filter(x=>!x.isPenalty).length-(a.bets||[]).filter(x=>!x.isPenalty).length
+        )[0]||null;
+        const catCount = {};
+        for (const m of markets) catCount[m.category]=(catCount[m.category]||0)+1;
+        const topCat = Object.entries(catCount).sort((a,b)=>b[1]-a[1])[0]||null;
+
+        // Joueurs
+        const betsByPlayer = {};
+        for (const b of allBets) betsByPlayer[b.userId]=(betsByPlayer[b.userId]||0)+1;
+        const mostActiveId = Object.entries(betsByPlayer).sort((a,b)=>b[1]-a[1])[0]?.[0];
+        const mostActive = mostActiveId?users.find(u=>u.id===mostActiveId):null;
+
+        const bestWinRate = players.map(u=>{
+          const s=computeStats(u.id,markets);
+          const t=s.wins+s.losses;
+          return {...u,winRate:t>=5?Math.round(s.wins/t*100):null,total:t};
+        }).filter(u=>u.winRate!==null).sort((a,b)=>b.winRate-a.winRate)[0]||null;
+
+        const biggestWin = resolvedMkts.reduce((best,m)=>{
+          const winners=(m.bets||[]).filter(b=>!b.isPenalty&&b.side===m.result);
+          const pool=(m.bets||[]).reduce((s,b)=>s+b.amount,0);
+          const winStake=winners.reduce((s,b)=>s+b.amount,0);
+          for (const w of winners) {
+            const gain=winStake>0?Math.round(w.amount/winStake*pool)-w.amount:0;
+            if (gain>best.gain) return {gain,pseudo:w.pseudo,market:m.title};
+          }
+          return best;
+        },{gain:0,pseudo:null,market:null});
+
+        // Fun
+        const yesTotal=allBets.filter(b=>b.side==="yes").length;
+        const noTotal=allBets.filter(b=>b.side==="no").length;
+        const yesRatio=allBets.length>0?Math.round(yesTotal/allBets.length*100):50;
+
+        const StatCard = ({title, value, sub, color="#ffdc32", emoji}) => (
+          <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:"16px 18px"}}>
+            <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8,fontWeight:"bold"}}>{emoji} {title}</div>
+            <div style={{fontSize:20,fontWeight:"bold",color,marginBottom:sub?4:0}}>{value}</div>
+            {sub&&<div style={{fontSize:10,color:"#444",lineHeight:1.4}}>{sub}</div>}
+          </div>
+        );
+
+        return (
+          <div style={{maxWidth:900,margin:"0 auto",padding:"28px 20px",position:"relative",zIndex:1}}>
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>VUE D'ENSEMBLE</div>
+              <div style={{fontSize:24,fontWeight:"bold"}}>📈 Stats Globales</div>
+            </div>
+
+            <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>ÉCONOMIE</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8,marginBottom:24}}>
+              <StatCard emoji="💰" title="SC EN CIRCULATION" value={totalSC.toLocaleString()+" SC"} sub={`Parmi ${players.length} joueur${players.length>1?"s":""}`}/>
+              <StatCard emoji="🎲" title="SC MISÉS AU TOTAL" value={totalMise.toLocaleString()+" SC"} sub={`${allBets.length} paris passés`}/>
+              <StatCard emoji="🏆" title="SC DISTRIBUÉS EN GAINS" value={totalGains.toLocaleString()+" SC"} sub={`Sur ${resolvedMkts.length} marchés clôturés`}/>
+              <StatCard emoji="📊" title="MISE MOYENNE" value={avgBet.toLocaleString()+" SC"} sub="Par pari"/>
+            </div>
+
+            <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>MARCHÉS</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8,marginBottom:24}}>
+              <StatCard emoji="🔥" title="PLUS POPULAIRE" value={mostPopular?`${mostPopular.emoji} ${mostPopular.title.slice(0,30)}...`:"—"} sub={mostPopular?`${(mostPopular.bets||[]).reduce((s,b)=>s+b.amount,0).toLocaleString()} SC misés`:null} color="#f97316"/>
+              <StatCard emoji="👥" title="PLUS DE PARIEURS" value={mostBettors?`${mostBettors.emoji} ${mostBettors.title.slice(0,30)}...`:"—"} sub={mostBettors?`${(mostBettors.bets||[]).filter(b=>!b.isPenalty).length} parieurs`:null} color="#22d3ee"/>
+              <StatCard emoji="📂" title="CATÉGORIE LA + ACTIVE" value={topCat?topCat[0].toUpperCase():"—"} sub={topCat?`${topCat[1]} marché${topCat[1]>1?"s":""}`:null} color={topCat?CAT_COLOR[topCat[0]]:"#444"}/>
+              <StatCard emoji="📋" title="TOTAL MARCHÉS" value={markets.length} sub={`${resolvedMkts.length} clôturés · ${markets.filter(m=>!m.resolved).length} actifs`}/>
+            </div>
+
+            <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>JOUEURS</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8,marginBottom:24}}>
+              <StatCard emoji="⚡" title="JOUEUR LE + ACTIF" value={mostActive?`${mostActive.avatar} ${mostActive.pseudo}`:"—"} sub={mostActive?`${betsByPlayer[mostActive.id]} paris passés`:null} color="#a855f7"/>
+              <StatCard emoji="🎯" title="MEILLEUR WIN RATE" value={bestWinRate?`${bestWinRate.avatar} ${bestWinRate.pseudo}`:"—"} sub={bestWinRate?`${bestWinRate.winRate}% (min. 5 paris)`:null} color="#10b981"/>
+              <StatCard emoji="💸" title="PLUS GROS GAIN" value={biggestWin.pseudo?`${biggestWin.pseudo}`:"—"} sub={biggestWin.pseudo?`+${biggestWin.gain.toLocaleString()} SC sur "${biggestWin.market?.slice(0,25)}..."`:null} color="#ffd700"/>
+            </div>
+
+            <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>FUN</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8}}>
+              <StatCard emoji="✅" title="RATIO OUI / NON" value={`${yesRatio}% OUI`} sub={`${100-yesRatio}% NON — ${allBets.length} paris au total`} color="#10b981"/>
+              <StatCard emoji="👥" title="JOUEURS INSCRITS" value={players.length} sub={`+ 1 organisateur`}/>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ADMIN PANEL */}
       {view==="admin" && isAdmin && (
