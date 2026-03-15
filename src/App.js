@@ -1436,7 +1436,7 @@ export default function SchoolMarket() {
                     </div>
                     {!mkt.resolved && (()=>{
                       const ref100 = myBet ? myBet.amount : 100;
-                      const label = myBet ? <span style={{color:"#ffdc32"}}>Ta mise</span> : "Ex:";
+                      const label = myBet ? "Ta mise" : "Ex:";
                       if (myBet) {
                         const gainSide = myBet.side==="yes"
                           ? (odds.yesTotal>0?Math.round(ref100*odds.total/odds.yesTotal):ref100)
