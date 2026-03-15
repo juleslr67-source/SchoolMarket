@@ -1444,9 +1444,9 @@ export default function SchoolMarket() {
                         const color = myBet.side==="yes"?"#10b981":"#ef4444";
                         const emoji = myBet.side==="yes"?"✅":"❌";
                         return (
-                          <div style={{fontSize:9,color:"#ccc",marginBottom:10,padding:"5px 8px",
+                          <div style={{fontSize:9,color:"#fff",marginBottom:10,padding:"5px 8px",
                             background:"#0a0a0a",borderRadius:2,textAlign:"center"}}>
-                            {emoji} <span style={{color:"#fff",fontWeight:"bold"}}>{label} {ref100} SC →</span> <span style={{color,fontWeight:"bold"}}>{gainSide} SC</span>
+                            {emoji} <span style={{fontWeight:"bold"}}>{label} {ref100} SC →</span> <span style={{color,fontWeight:"bold"}}>{gainSide} SC</span>
                           </div>
                         );
                       }
