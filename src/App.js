@@ -520,7 +520,7 @@ export default function SchoolMarket() {
 
   // ── DÉRIVÉS ─────────────────────────────────────────────────────
   const visibleUsers = users.filter(u=>u.pseudo!==ADMIN_PSEUDO);
-  const leaderboardUsers = users.filter(u=>!u.banned);
+  const leaderboardUsers = users.filter(u=>!u.banned && !u.isAdmin);
   const leaderboard = leaderboardUsers.map(u=>{
     const s=computeStats(u.id,markets);
     const t=s.wins+s.losses;
@@ -1113,6 +1113,45 @@ export default function SchoolMarket() {
             <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>CLASSEMENT GÉNÉRAL</div>
             <div style={{fontSize:24,fontWeight:"bold"}}>🏆 Meilleurs parieurs</div>
           </div>
+
+          {/* Bandeau organisateur */}
+          {(()=>{
+            const admin = users.find(u=>u.isAdmin);
+            if (!admin) return null;
+            const adminStats = computeStats(admin.id, markets);
+            const total = adminStats.wins + adminStats.losses;
+            return (
+              <div style={{background:"linear-gradient(135deg,#1a0a2e,#0d0d0d)",
+                border:"1px solid #a855f730",borderRadius:4,padding:"14px 18px",
+                marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
+                <div style={{fontSize:36}}>{admin.avatar}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                    <span style={{fontSize:14,fontWeight:"bold",color:"#a855f7"}}>{admin.pseudo}</span>
+                    <span style={{fontSize:8,color:"#a855f7",background:"#a855f715",
+                      padding:"2px 7px",borderRadius:2,letterSpacing:2}}>ORGANISATEUR</span>
+                  </div>
+                  <div style={{fontSize:9,color:"#555"}}>
+                    Créateur de SchoolMarket · Hors compétition
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:16,textAlign:"center"}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:"bold",color:"#ffdc32"}}>{admin.wallet.toLocaleString()}</div>
+                    <div style={{fontSize:8,color:"#444",letterSpacing:1}}>SC</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:"bold",color:"#10b981"}}>{adminStats.wins}</div>
+                    <div style={{fontSize:8,color:"#444",letterSpacing:1}}>VICTOIRES</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:"bold",color:"#ccc"}}>{total>0?Math.round(adminStats.wins/total*100):0}%</div>
+                    <div style={{fontSize:8,color:"#444",letterSpacing:1}}>WIN RATE</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           {leaderboard.length===0 ? (
             <div style={{textAlign:"center",color:"#333",padding:"60px 0",fontSize:13}}>
               Aucun joueur inscrit.
