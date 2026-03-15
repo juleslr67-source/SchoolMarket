@@ -1437,6 +1437,19 @@ export default function SchoolMarket() {
                     {!mkt.resolved && (()=>{
                       const ref100 = myBet ? myBet.amount : 100;
                       const label = myBet ? "Ta mise" : "Ex:";
+                      if (myBet) {
+                        const gainSide = myBet.side==="yes"
+                          ? (odds.yesTotal>0?Math.round(ref100*odds.total/odds.yesTotal):ref100)
+                          : (odds.noTotal>0?Math.round(ref100*odds.total/odds.noTotal):ref100);
+                        const color = myBet.side==="yes"?"#10b981":"#ef4444";
+                        const emoji = myBet.side==="yes"?"✅":"❌";
+                        return (
+                          <div style={{fontSize:9,color:"#333",marginBottom:10,padding:"5px 8px",
+                            background:"#0a0a0a",borderRadius:2,textAlign:"center"}}>
+                            {emoji} {label} {ref100} SC → <span style={{color,fontWeight:"bold"}}>{gainSide} SC</span>
+                          </div>
+                        );
+                      }
                       return (
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:9,
                           color:"#333",marginBottom:10,padding:"5px 8px",
