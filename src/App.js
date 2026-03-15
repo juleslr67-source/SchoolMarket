@@ -210,6 +210,9 @@ export default function SchoolMarket() {
   const [myRenamErr,  setMyRenamErr]  = useState("");
   const [notifOpen,   setNotifOpen]   = useState(false);
   const [cashprizeAmt,setCashprizeAmt]= useState("500");
+  const [announceOpen,setAnnounceOpen]= useState(null); // annonce ouverte en modal
+  const [annTitle,    setAnnTitle]    = useState("🎉 Grosse mise à jour SchoolMarket !");
+  const [annBody,     setAnnBody]     = useState(`Voici toutes les nouveautés :\n\n🛒 Boutique — Achète des couleurs de pseudo, badges et cadres visibles dans le classement\n🎰 Loterie hebdo — 50 SC le ticket, tirage chaque semaine\n🔥 Streak de victoires — Enchaîne les wins et affiche ta série\n⭐ Meilleur & Pire parieur de la semaine — Visible dans le classement\n📁 Paris Clôturés — Retrouve tous les anciens paris\n🌍 Hors les murs — Nouvelle catégorie pour parier hors lycée\n🎁 Bonus quotidien — +50 SC à chaque connexion\n💳 Remise en jeu — Crédit automatique si tu tombes sous 100 SC\n📈 Stats globales — Toutes les stats du site\n🏆 Paliers — Atteins 2k, 5k, 10k, 25k SC pour débloquer des badges\n📌 Paris en vedette — L'admin épingle le pari du moment`);
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
 
@@ -556,6 +559,28 @@ export default function SchoolMarket() {
     showToast("❌ Article déséquipé.");
   };
 
+  // ── ANNONCES ─────────────────────────────────────────────────────
+  const sendAnnouncement = () => {
+    if (!annTitle.trim()) return showToast("Titre requis","err");
+    const notif = {
+      id:`n_ann_${Date.now()}`,
+      ts: Date.now(),
+      read: false,
+      isAnnouncement: true,
+      marketTitle: annTitle.trim(),
+      marketEmoji: "📢",
+      annBody: annBody.trim(),
+      amount:0, gain:0, profit:0, won:true,
+    };
+    const cur = usersRef.current;
+    const newU = cur.map(u => u.isAdmin ? u : {
+      ...u,
+      notifications: [...(u.notifications||[]), notif].slice(-30)
+    });
+    saveU(newU);
+    showToast("📢 Annonce envoyée à tous les joueurs !");
+  };
+
   // ── ÉPINGLER MARCHÉ ──────────────────────────────────────────────
   const pinMarket = (marketId) => {
     const alreadyPinned = marketsRef.current.find(m=>m.pinned);
@@ -783,23 +808,39 @@ export default function SchoolMarket() {
                         </div>
                       ) : [...(myUserFresh?.notifications||[])].reverse().map(n=>(
                         <div key={n.id} style={{padding:"10px 14px",borderBottom:"1px solid #0d0d0d",
-                          background:n.read?"transparent":"#ffffff04"}}>
+                          background:n.isAnnouncement?"#0a0a1a":n.read?"transparent":"#ffffff04",
+                          borderLeft:n.isAnnouncement?"2px solid #6366f1":"2px solid transparent"}}>
                           <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                             <span style={{fontSize:16,flexShrink:0}}>{n.marketEmoji}</span>
                             <div style={{flex:1,minWidth:0}}>
-                              <div style={{fontSize:10,color:"#ccc",marginBottom:2,
-                                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                              <div style={{fontSize:10,color:n.isAnnouncement?"#a5b4fc":"#ccc",
+                                fontWeight:n.isAnnouncement?"bold":"normal",
+                                marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                                 {n.marketTitle}
                               </div>
-                              <div style={{fontSize:11,fontWeight:"bold",
-                                color:n.won?"#10b981":"#ef4444"}}>
-                                {n.won
-                                  ? `🎉 Gagné ! +${n.profit.toLocaleString()} SC`
-                                  : `😢 Perdu — ${Math.abs(n.profit).toLocaleString()} SC`}
-                              </div>
-                              <div style={{fontSize:9,color:"#333",marginTop:2}}>
-                                Mise : {n.amount} SC · {new Date(n.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
-                              </div>
+                              {n.isAnnouncement ? (
+                                <div style={{fontSize:9,color:"#6366f1",cursor:"pointer",marginTop:2}}
+                                  onClick={()=>setAnnounceOpen(n)}>
+                                  → Lire l'annonce
+                                </div>
+                              ) : n.isMilestone ? (
+                                <div style={{fontSize:11,fontWeight:"bold",color:"#ffd700"}}>
+                                  🏆 Palier débloqué !
+                                </div>
+                              ) : (
+                                <>
+                                  <div style={{fontSize:11,fontWeight:"bold",
+                                    color:n.won?"#10b981":"#ef4444"}}>
+                                    {n.profit===0?"":n.won
+                                      ? `🎉 Gagné ! +${n.profit.toLocaleString()} SC`
+                                      : `😢 Perdu — ${Math.abs(n.profit).toLocaleString()} SC`}
+                                  </div>
+                                  <div style={{fontSize:9,color:"#333",marginTop:2}}>
+                                    {n.amount>0?`Mise : ${n.amount} SC · `:""}
+                                    {new Date(n.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1842,7 +1883,7 @@ export default function SchoolMarket() {
             <div style={{fontSize:24,fontWeight:"bold"}}>👑 Admin Panel</div>
           </div>
           <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid #1a1a1a",paddingBottom:12}}>
-            {[["markets","📊 Marchés"],["users","👥 Joueurs"],["renames","✏️ Pseudos"+(pendingRenames.length>0?` (${pendingRenames.length})`:"")],["lottery","🎰 Loterie"]].map(([t,lbl])=>(
+            {[["markets","📊 Marchés"],["users","👥 Joueurs"],["renames","✏️ Pseudos"+(pendingRenames.length>0?` (${pendingRenames.length})`:"")],["lottery","🎰 Loterie"],["announce","📢 Annonces"]].map(([t,lbl])=>(
               <button key={t} onClick={()=>setAdminTab(t)} style={{
                 background:adminTab===t?"#a855f715":"transparent",color:adminTab===t?"#a855f7":"#444",
                 border:adminTab===t?"1px solid #a855f730":"1px solid transparent",
@@ -1940,6 +1981,42 @@ export default function SchoolMarket() {
                       fontWeight:"bold",fontSize:10,fontFamily:"inherit",letterSpacing:1}}>
                     🏆 ENVOYER LE CASHPRIZE
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {adminTab==="announce" && (
+            <div>
+              <div style={{background:"#0f0f0f",border:"1px solid #6366f130",borderRadius:4,padding:24}}>
+                <div style={{fontSize:10,color:"#6366f1",letterSpacing:2,marginBottom:16,fontWeight:"bold"}}>
+                  📢 ENVOYER UNE ANNONCE À TOUS LES JOUEURS
+                </div>
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>TITRE</div>
+                  <input value={annTitle} onChange={e=>setAnnTitle(e.target.value)}
+                    maxLength={60}
+                    style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",
+                      color:"#e8e0d0",padding:"9px 12px",borderRadius:2,fontSize:12,
+                      fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                </div>
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>MESSAGE</div>
+                  <textarea value={annBody} onChange={e=>setAnnBody(e.target.value)}
+                    rows={10}
+                    style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",
+                      color:"#e8e0d0",padding:"9px 12px",borderRadius:2,fontSize:11,
+                      fontFamily:"inherit",outline:"none",resize:"vertical",
+                      boxSizing:"border-box",lineHeight:1.7}}/>
+                </div>
+                <button onClick={sendAnnouncement}
+                  style={{background:"#6366f1",color:"#fff",border:"none",
+                    padding:"10px 20px",borderRadius:2,cursor:"pointer",
+                    fontWeight:"bold",fontSize:10,fontFamily:"inherit",letterSpacing:1}}>
+                  📢 ENVOYER À TOUS
+                </button>
+                <div style={{fontSize:9,color:"#333",marginTop:8}}>
+                  L'annonce apparaîtra dans la cloche 🔔 de chaque joueur.
                 </div>
               </div>
             </div>
@@ -2175,6 +2252,36 @@ export default function SchoolMarket() {
             </Field>
             <button onClick={createMarket} style={{...S.btn("#ffdc32","#0d0d0d")}}>→ PUBLIER</button>
             <button onClick={()=>setCreateOpen(false)} style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ANNONCE */}
+      {announceOpen && (
+        <div style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.95)",
+          backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+          onClick={()=>setAnnounceOpen(null)}>
+          <div style={{background:"#111",border:"2px solid #6366f1",borderRadius:4,
+            padding:28,maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto"}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:9,color:"#6366f1",letterSpacing:3,marginBottom:8,fontWeight:"bold"}}>
+              📢 ANNONCE
+            </div>
+            <div style={{fontSize:16,fontWeight:"bold",marginBottom:4,color:"#a5b4fc"}}>
+              {announceOpen.marketTitle}
+            </div>
+            <div style={{fontSize:9,color:"#444",marginBottom:16}}>
+              {new Date(announceOpen.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}
+            </div>
+            <div style={{fontSize:12,color:"#ccc",lineHeight:1.8,whiteSpace:"pre-wrap"}}>
+              {announceOpen.annBody}
+            </div>
+            <button onClick={()=>setAnnounceOpen(null)}
+              style={{marginTop:20,background:"#6366f1",color:"#fff",border:"none",
+                padding:"8px 20px",borderRadius:2,cursor:"pointer",
+                fontWeight:"bold",fontSize:10,fontFamily:"inherit"}}>
+              ✓ Fermer
+            </button>
           </div>
         </div>
       )}
