@@ -1429,11 +1429,20 @@ export default function SchoolMarket() {
                         <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:2}}/>
                       </div>
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginBottom:12}}>
-                      <span style={{color:"#10b981"}}>OUI {odds.yesPct}% <span style={{color:"#10b98199",fontSize:9}}>x{odds.yesTotal>0?(odds.total/odds.yesTotal).toFixed(2):"—"}</span></span>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginBottom:8}}>
+                      <span style={{color:"#10b981",fontWeight:"bold",fontSize:13}}>OUI <span style={{fontSize:12}}>x{odds.yesTotal>0?(odds.total/odds.yesTotal).toFixed(2):"—"}</span></span>
                       <span style={{color:"#ffdc32",fontWeight:"bold"}}>{odds.total.toLocaleString()} SC misés</span>
-                      <span style={{color:"#ef4444"}}>NON {odds.noPct}% <span style={{color:"#ef444499",fontSize:9}}>x{odds.noTotal>0?(odds.total/odds.noTotal).toFixed(2):"—"}</span></span>
+                      <span style={{color:"#ef4444",fontWeight:"bold",fontSize:13}}>NON <span style={{fontSize:12}}>x{odds.noTotal>0?(odds.total/odds.noTotal).toFixed(2):"—"}</span></span>
                     </div>
+                    {!mkt.resolved && (
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,
+                        color:"#333",marginBottom:10,padding:"5px 8px",
+                        background:"#0a0a0a",borderRadius:2}}>
+                        <span>✅ 100 SC → <span style={{color:"#10b981",fontWeight:"bold"}}>{odds.yesTotal>0?Math.round(100*odds.total/odds.yesTotal):100} SC</span></span>
+                        <span style={{color:"#444"}}>si OUI gagne</span>
+                        <span>❌ 100 SC → <span style={{color:"#ef4444",fontWeight:"bold"}}>{odds.noTotal>0?Math.round(100*odds.total/odds.noTotal):100} SC</span></span>
+                      </div>
+                    )}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{fontSize:9,color:"#333"}}>par {mkt.creatorPseudo}</div>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -2256,12 +2265,21 @@ export default function SchoolMarket() {
             <div style={{fontSize:14,fontWeight:"bold",marginBottom:14,lineHeight:1.4}}>{betModal.title}</div>
             <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>TON CHOIX</div>
             <div style={{display:"flex",gap:8,marginBottom:16}}>
-              {[["yes","✅ OUI","#10b981"],["no","❌ NON","#ef4444"]].map(([s,lbl,c])=>(
-                <button key={s} onClick={()=>setBetSide(s)} style={{flex:1,padding:"11px",
-                  border:betSide===s?`2px solid ${c}`:"1px solid #252525",
-                  background:betSide===s?`${c}18`:"#0d0d0d",color:betSide===s?c:"#555",
-                  borderRadius:2,cursor:"pointer",fontWeight:"bold",fontSize:14,fontFamily:"inherit"}}>{lbl}</button>
-              ))}
+              {[["yes","✅ OUI","#10b981"],["no","❌ NON","#ef4444"]].map(([s,lbl,c])=>{
+                const betOdds = computeOdds(betModal);
+                const cote = s==="yes"
+                  ? (betOdds.yesTotal>0?(betOdds.total/betOdds.yesTotal).toFixed(2):"—")
+                  : (betOdds.noTotal>0?(betOdds.total/betOdds.noTotal).toFixed(2):"—");
+                return (
+                  <button key={s} onClick={()=>setBetSide(s)} style={{flex:1,padding:"11px",
+                    border:betSide===s?`2px solid ${c}`:"1px solid #252525",
+                    background:betSide===s?`${c}18`:"#0d0d0d",color:betSide===s?c:"#555",
+                    borderRadius:2,cursor:"pointer",fontFamily:"inherit"}}>
+                    <div style={{fontWeight:"bold",fontSize:14}}>{lbl}</div>
+                    <div style={{fontSize:11,marginTop:3,opacity:0.8}}>x{cote}</div>
+                  </button>
+                );
+              })}
             </div>
             <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>MISE (SC)</div>
             <div style={{display:"flex",gap:6,marginBottom:5}}>
