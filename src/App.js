@@ -77,13 +77,29 @@ function computeOdds(market) {
 
 function computeStats(userId, markets) {
   let wins=0, losses=0;
-  for (const m of markets) {
-    if (!m.resolved) continue;
+  // Trier les marchés clôturés par date de résolution
+  const resolved = markets
+    .filter(m=>m.resolved && (m.bets||[]).find(b=>b.userId===userId&&!b.isPenalty))
+    .sort((a,b)=>(a.resolvedAt||a.ts)-(b.resolvedAt||b.ts));
+  for (const m of resolved) {
     const bet = (m.bets||[]).find(b=>b.userId===userId && !b.isPenalty);
-    if (!bet) continue;
     if (bet.side===m.result) wins++; else losses++;
   }
-  return { wins, losses };
+  // Streak actuel (victoires consécutives en partant de la fin)
+  let streak = 0;
+  for (let i=resolved.length-1; i>=0; i--) {
+    const bet = (resolved[i].bets||[]).find(b=>b.userId===userId&&!b.isPenalty);
+    if (bet && bet.side===resolved[i].result) streak++;
+    else break;
+  }
+  // Record de streak
+  let bestStreak=0, cur=0;
+  for (const m of resolved) {
+    const bet = (m.bets||[]).find(b=>b.userId===userId&&!b.isPenalty);
+    if (bet && bet.side===m.result) { cur++; if(cur>bestStreak) bestStreak=cur; }
+    else cur=0;
+  }
+  return { wins, losses, streak, bestStreak };
 }
 
 const Field = ({ label, children }) => (
@@ -875,6 +891,20 @@ export default function SchoolMarket() {
                         <div style={{fontSize:8,color:"#444",letterSpacing:1}}>{label}</div>
                       </div>
                     ))}
+                    {stats.streak>=2&&(
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:16}}>🔥</div>
+                        <div style={{fontSize:16,fontWeight:"bold",color:"#f97316"}}>{stats.streak}</div>
+                        <div style={{fontSize:8,color:"#444",letterSpacing:1}}>STREAK</div>
+                      </div>
+                    )}
+                    {stats.bestStreak>=3&&(
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:16}}>⭐</div>
+                        <div style={{fontSize:16,fontWeight:"bold",color:"#fbbf24"}}>{stats.bestStreak}</div>
+                        <div style={{fontSize:8,color:"#444",letterSpacing:1}}>RECORD</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1345,6 +1375,7 @@ export default function SchoolMarket() {
                             </span>
                             {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:2}}>ADMIN</span>}
                             {u.banned&&<span style={{marginLeft:4,fontSize:8,color:"#ef4444"}}>BANNI</span>}
+                            {u.streak>=2&&<span style={{fontSize:9,fontWeight:"bold",color:"#f97316"}}>🔥{u.streak}</span>}
                           </div>
                           {badge&&<div style={{fontSize:9,color:RARITY_COLOR[badge.rarity]}}>{badge.name}</div>}
                         </div>
