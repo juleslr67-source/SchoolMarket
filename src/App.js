@@ -213,6 +213,14 @@ export default function SchoolMarket() {
   const [announceOpen,setAnnounceOpen]= useState(null); // annonce ouverte en modal
   const [annTitle,    setAnnTitle]    = useState("🎉 Grosse mise à jour SchoolMarket !");
   const [annBody,     setAnnBody]     = useState(`Voici toutes les nouveautés :\n\n🛒 Boutique — Achète des couleurs de pseudo, badges et cadres visibles dans le classement\n🎰 Loterie hebdo — 50 SC le ticket, tirage chaque semaine\n🔥 Streak de victoires — Enchaîne les wins et affiche ta série\n⭐ Meilleur & Pire parieur de la semaine — Visible dans le classement\n📁 Paris Clôturés — Retrouve tous les anciens paris\n🌍 Hors les murs — Nouvelle catégorie pour parier hors lycée\n🎁 Bonus quotidien — +50 SC à chaque connexion\n💳 Remise en jeu — Crédit automatique si tu tombes sous 100 SC\n📈 Stats globales — Toutes les stats du site\n🏆 Paliers — Atteins 2k, 5k, 10k, 25k SC pour débloquer des badges\n📌 Paris en vedette — L'admin épingle le pari du moment`);
+  // Blackjack
+  const [bjBet,    setBjBet]    = useState(100);
+  const [bjDeck,   setBjDeck]   = useState([]);
+  const [bjPlayer, setBjPlayer] = useState([]);
+  const [bjDealer, setBjDealer] = useState([]);
+  const [bjPhase,  setBjPhase]  = useState("bet");
+  const [bjResult, setBjResult] = useState(null);
+  const [bjMsg,    setBjMsg]    = useState("");
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
 
@@ -581,6 +589,115 @@ export default function SchoolMarket() {
     showToast("📢 Annonce envoyée à tous les joueurs !");
   };
 
+  // ── BLACKJACK ────────────────────────────────────────────────────
+  const BJ_SUITS = ["♠","♥","♦","♣"];
+  const BJ_VALUES = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+
+  const makeDeck = () => {
+    const deck = [];
+    for (const s of BJ_SUITS) for (const v of BJ_VALUES) deck.push({s,v});
+    // Mélanger
+    for (let i=deck.length-1;i>0;i--) {
+      const j=Math.floor(Math.random()*(i+1));
+      [deck[i],deck[j]]=[deck[j],deck[i]];
+    }
+    return deck;
+  };
+
+  const bjCardValue = (card) => {
+    if (["J","Q","K"].includes(card.v)) return 10;
+    if (card.v==="A") return 11;
+    return parseInt(card.v);
+  };
+
+  const bjHandValue = (hand) => {
+    let total = hand.reduce((s,c)=>s+bjCardValue(c),0);
+    let aces = hand.filter(c=>c.v==="A").length;
+    while (total>21 && aces>0) { total-=10; aces--; }
+    return total;
+  };
+
+  const bjStart = () => {
+    const freshMe = usersRef.current.find(u=>u.id===me.id)||me;
+    const bet = parseInt(bjBet)||0;
+    if (bet<50) return showToast("Mise minimum : 50 SC","err");
+    if (bet>freshMe.wallet) return showToast("Pas assez de SC","err");
+    const deck = makeDeck();
+    const player = [deck.pop(), deck.pop()];
+    const dealer = [deck.pop(), deck.pop()];
+    // Débiter la mise
+    const newMe = {...freshMe, wallet:freshMe.wallet-bet};
+    saveU(usersRef.current.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    setBjDeck(deck); setBjPlayer(player); setBjDealer(dealer);
+    setBjResult(null); setBjMsg("");
+    // Vérifier blackjack immédiat
+    if (bjHandValue(player)===21) {
+      setBjPhase("done");
+      bjEndGame(player, dealer, deck, bet, newMe, true);
+    } else {
+      setBjPhase("play");
+    }
+  };
+
+  const bjHit = () => {
+    const deck = [...bjDeck];
+    const player = [...bjPlayer, deck.pop()];
+    setBjDeck(deck); setBjPlayer(player);
+    const val = bjHandValue(player);
+    if (val>21) {
+      setBjPhase("done"); setBjResult("lose");
+      setBjMsg(`💥 Bust ! Tu as ${val}. Perdu — ${bjBet} SC`);
+    } else if (val===21) {
+      bjStand(player, deck);
+    }
+  };
+
+  const bjStand = (playerHand=null, deckOverride=null) => {
+    const player = playerHand||bjPlayer;
+    let deck = [...(deckOverride||bjDeck)];
+    let dealer = [...bjDealer];
+    while (bjHandValue(dealer)<17) dealer.push(deck.pop());
+    setBjDealer(dealer); setBjDeck(deck); setBjPhase("done");
+    bjEndGame(player, dealer, deck, parseInt(bjBet), null, false);
+  };
+
+  const bjDouble = () => {
+    const freshMe = usersRef.current.find(u=>u.id===me.id)||me;
+    const extra = parseInt(bjBet);
+    if (freshMe.wallet<extra) return showToast("Pas assez de SC pour doubler","err");
+    const newMe = {...freshMe, wallet:freshMe.wallet-extra};
+    saveU(usersRef.current.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    const deck = [...bjDeck];
+    const player = [...bjPlayer, deck.pop()];
+    setBjDeck(deck); setBjPlayer(player);
+    let dealer = [...bjDealer];
+    while (bjHandValue(dealer)<17) dealer.push(deck.pop());
+    setBjDealer(dealer); setBjPhase("done");
+    bjEndGame(player, dealer, deck, extra*2, newMe, false);
+  };
+
+  const bjEndGame = (player, dealer, deck, bet, meOverride=null, isBlackjack=false) => {
+    const pVal = bjHandValue(player);
+    const dVal = bjHandValue(dealer);
+    const cur = usersRef.current;
+    const freshMe = meOverride || cur.find(u=>u.id===me.id)||me;
+    let gain = 0; let result = ""; let msg = "";
+    if (pVal>21) { result="lose"; msg=`💥 Bust ! Perdu — ${bet} SC`; }
+    else if (isBlackjack && dVal!==21) { gain=Math.round(bet*2.5); result="blackjack"; msg=`🃏 BLACKJACK ! +${gain-bet} SC`; }
+    else if (dVal>21) { gain=bet*2; result="win"; msg=`🎉 Croupier bust ! +${bet} SC`; }
+    else if (pVal>dVal) { gain=bet*2; result="win"; msg=`🎉 Gagné ! +${bet} SC`; }
+    else if (pVal===dVal) { gain=bet; result="push"; msg=`🤝 Égalité — remboursé`; }
+    else { result="lose"; msg=`😢 Perdu — ${bet} SC`; }
+    if (gain>0) {
+      const newMe2 = {...freshMe, wallet:freshMe.wallet+gain};
+      saveU(cur.map(u=>u.id===me.id?newMe2:u));
+      setMe(newMe2);
+    }
+    setBjResult(result); setBjMsg(msg);
+  };
+
   // ── ÉPINGLER MARCHÉ ──────────────────────────────────────────────
   const pinMarket = (marketId) => {
     const alreadyPinned = marketsRef.current.find(m=>m.pinned);
@@ -844,7 +961,7 @@ export default function SchoolMarket() {
           SM<span style={{color:"#e8e0d0"}}>.</span>
         </div>
         <nav style={{display:"flex",gap:2,flex:1,overflow:"auto"}}>
-          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"],["shop","🛒 Boutique"],["stats","📈 Stats"]].map(([v,lbl])=>(
+          {[["markets","📊 Marchés"],["clotures","📁 Clôturés"],["leaderboard","🏆 Classement"],["shop","🛒 Boutique"],["stats","📈 Stats"],["casino","🃏 Casino"]].map(([v,lbl])=>(
             <button key={v} onClick={()=>setView(v)} style={{
               background:view===v?"#ffdc3215":"transparent",
               color:view===v?"#ffdc32":"#555",border:"none",
@@ -1994,6 +2111,139 @@ export default function SchoolMarket() {
           </div>
         );
       })()}
+
+      {/* CASINO — BLACKJACK */}
+      {view==="casino" && (
+        <div style={{maxWidth:600,margin:"0 auto",padding:"28px 20px",position:"relative",zIndex:1}}>
+          <div style={{marginBottom:24}}>
+            <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>JOUE TON CAPITAL</div>
+            <div style={{fontSize:24,fontWeight:"bold"}}>🃏 Blackjack</div>
+            <div style={{fontSize:11,color:"#444",marginTop:4}}>Toi contre le croupier. Le plus proche de 21 sans dépasser.</div>
+          </div>
+
+          {/* Solde */}
+          <div style={{background:"#0f0f0f",border:"1px solid #ffdc3230",borderRadius:4,
+            padding:"12px 18px",marginBottom:20,display:"flex",alignItems:"center",gap:12}}>
+            <div style={{fontSize:9,color:"#555",letterSpacing:2}}>TON SOLDE</div>
+            <div style={{fontSize:20,fontWeight:"bold",color:"#ffdc32"}}>
+              💰 {(myUserFresh||me).wallet.toLocaleString()} SC
+            </div>
+          </div>
+
+          {bjPhase==="bet" && (
+            <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:28,textAlign:"center"}}>
+              <div style={{fontSize:11,color:"#444",letterSpacing:2,marginBottom:16}}>TA MISE</div>
+              <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:16,flexWrap:"wrap"}}>
+                {[50,100,200,500,1000].map(v=>(
+                  <button key={v} onClick={()=>setBjBet(v)}
+                    style={{background:bjBet===v?"#ffdc32":"#1a1a1a",color:bjBet===v?"#0d0d0d":"#555",
+                      border:bjBet===v?"none":"1px solid #252525",padding:"8px 16px",borderRadius:2,
+                      cursor:"pointer",fontWeight:"bold",fontSize:11,fontFamily:"inherit"}}>
+                    {v} SC
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={bjBet} min={50} onChange={e=>setBjBet(e.target.value)}
+                style={{background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
+                  padding:"10px 16px",borderRadius:2,fontSize:16,fontFamily:"inherit",
+                  outline:"none",width:140,textAlign:"center",marginBottom:20}}/>
+              <div/>
+              <button onClick={bjStart}
+                style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
+                  padding:"12px 32px",borderRadius:2,cursor:"pointer",
+                  fontWeight:"bold",fontSize:13,fontFamily:"inherit",letterSpacing:1}}>
+                🃏 JOUER
+              </button>
+              <div style={{fontSize:9,color:"#333",marginTop:12}}>Mise min : 50 SC · Blackjack = x1.5</div>
+            </div>
+          )}
+
+          {(bjPhase==="play"||bjPhase==="done") && (()=>{
+            const CardComp = ({card, hidden=false}) => (
+              <div style={{
+                width:56,height:80,background:hidden?"#1a1a1a":"#fff",
+                border:`2px solid ${hidden?"#333":["♥","♦"].includes(card?.s)?"#ef4444":"#1a1a1a"}`,
+                borderRadius:6,display:"flex",flexDirection:"column",
+                alignItems:"center",justifyContent:"center",
+                color:hidden?"transparent":["♥","♦"].includes(card?.s)?"#ef4444":"#111",
+                fontSize:hidden?20:15,fontWeight:"bold",position:"relative",
+                boxShadow:"0 2px 8px rgba(0,0,0,0.4)"}}>
+                {hidden ? <span style={{color:"#333",fontSize:24}}>?</span> : <>
+                  <div style={{position:"absolute",top:4,left:6,fontSize:11,lineHeight:1}}>{card.v}</div>
+                  <div style={{fontSize:20}}>{card.s}</div>
+                  <div style={{position:"absolute",bottom:4,right:6,fontSize:11,lineHeight:1,transform:"rotate(180deg)"}}>{card.v}</div>
+                </>}
+              </div>
+            );
+            const pVal = bjHandValue(bjPlayer);
+            const dVal = bjPhase==="done" ? bjHandValue(bjDealer) : bjHandValue([bjDealer[0]]);
+            const resultColor = bjResult==="win"||bjResult==="blackjack"?"#10b981":bjResult==="push"?"#ffdc32":"#ef4444";
+            return (
+              <div>
+                {/* Croupier */}
+                <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:20,marginBottom:12}}>
+                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:12}}>
+                    CROUPIER {bjPhase==="done"?`— ${dVal}`:""}</div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {bjDealer.map((card,i)=>(
+                      <CardComp key={i} card={card} hidden={bjPhase==="play"&&i===1}/>
+                    ))}
+                  </div>
+                </div>
+                {/* Joueur */}
+                <div style={{background:"#0f0f0f",border:`1px solid ${bjPhase==="done"?resultColor+"40":"#1a1a1a"}`,
+                  borderRadius:4,padding:20,marginBottom:16}}>
+                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:12}}>
+                    TOI — {pVal} {pVal>21?"💥":pVal===21?"⚡":""}</div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {bjPlayer.map((card,i)=>(<CardComp key={i} card={card}/>))}
+                  </div>
+                </div>
+                {/* Résultat */}
+                {bjPhase==="done" && bjMsg && (
+                  <div style={{background:resultColor+"15",border:`1px solid ${resultColor}40`,
+                    borderRadius:4,padding:"14px 20px",textAlign:"center",marginBottom:16}}>
+                    <div style={{fontSize:16,fontWeight:"bold",color:resultColor}}>{bjMsg}</div>
+                  </div>
+                )}
+                {/* Boutons */}
+                {bjPhase==="play" && (
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={bjHit}
+                      style={{flex:1,background:"#10b981",color:"#fff",border:"none",
+                        padding:"12px",borderRadius:2,cursor:"pointer",
+                        fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>
+                      ➕ TIRER
+                    </button>
+                    <button onClick={()=>bjStand()}
+                      style={{flex:1,background:"#ef4444",color:"#fff",border:"none",
+                        padding:"12px",borderRadius:2,cursor:"pointer",
+                        fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>
+                      ✋ RESTER
+                    </button>
+                    {bjPlayer.length===2 && (
+                      <button onClick={bjDouble}
+                        style={{flex:1,background:"#f97316",color:"#fff",border:"none",
+                          padding:"12px",borderRadius:2,cursor:"pointer",
+                          fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>
+                        ✖2 DOUBLER
+                      </button>
+                    )}
+                  </div>
+                )}
+                {bjPhase==="done" && (
+                  <button onClick={()=>{setBjPhase("bet");setBjPlayer([]);setBjDealer([]);setBjResult(null);setBjMsg("");}}
+                    style={{width:"100%",background:"#ffdc32",color:"#0d0d0d",border:"none",
+                      padding:"12px",borderRadius:2,cursor:"pointer",
+                      fontWeight:"bold",fontSize:12,fontFamily:"inherit",marginTop:bjMsg?0:16}}>
+                    🔄 NOUVELLE PARTIE
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* ADMIN PANEL */}
       {view==="admin" && isAdmin && (
