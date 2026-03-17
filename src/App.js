@@ -222,19 +222,8 @@ export default function SchoolMarket() {
   const [bjResult, setBjResult] = useState(null);
   const [bjMsg,    setBjMsg]    = useState("");
   // Slot machine
-  const [slotReels,   setSlotReels]   = useState(["🍒","🍒","🍒"]);
-  const [slotSpin,    setSlotSpin]    = useState(false);
-  const [slotResult,  setSlotResult]  = useState(null);
-  const [slotMsg,     setSlotMsg]     = useState("");
-  const [slotBet,     setSlotBet]     = useState(50);
-  // Slots
-  const [slotReels,   setSlotReels]   = useState(["🍒","🍒","🍒"]);
-  const [slotSpinning,setSlotSpinning]= useState(false);
-  const [slotMsg,     setSlotMsg]     = useState("");
-  const [slotBet,     setSlotBet]     = useState(50);
-  // Slot machine
-  const [slotBet,      setSlotBet]      = useState(100);
-  const [slotReels,    setSlotReels]    = useState(["🎰","🎰","🎰"]);
+  const [slotBet,      setSlotBet]      = useState(50);
+  const [slotReels,    setSlotReels]    = useState(["🍒","🍒","🍒"]);
   const [slotSpinning, setSlotSpinning] = useState(false);
   const [slotResult,   setSlotResult]   = useState(null);
   const [slotMsg,      setSlotMsg]      = useState("");
@@ -714,71 +703,6 @@ export default function SchoolMarket() {
       setMe(newMe2);
     }
     setBjResult(result); setBjMsg(msg);
-  };
-
-  // ── SLOT MACHINE ─────────────────────────────────────────────────
-  const SLOT_SYMBOLS = ["💎","7️⃣","🍒","⭐","🍋","🔔","🍇","🎰"];
-  const SLOT_WEIGHTS = [2, 4, 8, 10, 12, 12, 14, 16]; // plus rare = plus petit
-
-  const slotRandom = () => {
-    const total = SLOT_WEIGHTS.reduce((a,b)=>a+b,0);
-    let r = Math.random()*total;
-    for (let i=0;i<SLOT_SYMBOLS.length;i++) {
-      r -= SLOT_WEIGHTS[i];
-      if (r<=0) return SLOT_SYMBOLS[i];
-    }
-    return SLOT_SYMBOLS[SLOT_SYMBOLS.length-1];
-  };
-
-  const slotSpin = () => {
-    const freshMe = usersRef.current.find(u=>u.id===me.id)||me;
-    const bet = parseInt(slotBet)||0;
-    if (bet<50) return showToast("Mise minimum : 50 SC","err");
-    if (bet>freshMe.wallet) return showToast("Pas assez de SC","err");
-    // Débiter
-    const newMe = {...freshMe, wallet:freshMe.wallet-bet};
-    saveU(usersRef.current.map(u=>u.id===me.id?newMe:u));
-    setMe(newMe);
-    setSlotSpinning(true);
-    setSlotResult(null);
-    setSlotMsg("");
-
-    // Animation : changer rapidement les symboles
-    let ticks = 0;
-    const interval = setInterval(()=>{
-      setSlotReels([slotRandom(),slotRandom(),slotRandom()]);
-      ticks++;
-      if (ticks>12) {
-        clearInterval(interval);
-        const r1=slotRandom(), r2=slotRandom(), r3=slotRandom();
-        setSlotReels([r1,r2,r3]);
-        setSlotSpinning(false);
-        // Calculer le gain
-        const MULTIPLIERS = {"💎":20,"7️⃣":15,"🍒":10,"⭐":8,"🍋":5,"🔔":4,"🍇":3};
-        let gain = 0; let result = "lose"; let msg = "";
-        if (r1===r2&&r2===r3) {
-          const mult = MULTIPLIERS[r1]||2;
-          gain = bet*mult;
-          result = "win";
-          msg = `${r1}${r2}${r3} — JACKPOT x${mult} ! +${gain-bet} SC 🎉`;
-        } else if (r1===r2||r2===r3||r1===r3) {
-          gain = Math.round(bet*1.5);
-          result = "small";
-          msg = `Deux identiques ! +${gain-bet} SC`;
-        } else {
-          msg = `Rien... Perdu — ${bet} SC 😢`;
-        }
-        if (gain>0) {
-          const cur = usersRef.current;
-          const fm = cur.find(u=>u.id===me.id)||me;
-          const newMe2 = {...fm, wallet:fm.wallet+gain};
-          saveU(cur.map(u=>u.id===me.id?newMe2:u));
-          setMe(newMe2);
-        }
-        setSlotResult(result);
-        setSlotMsg(msg);
-      }
-    }, 80);
   };
 
   // ── SLOT MACHINE ─────────────────────────────────────────────────
