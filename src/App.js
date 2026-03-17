@@ -121,8 +121,8 @@ const PwField = ({ value, onChange, placeholder }) => {
   return (
     <div style={{position:"relative"}}>
       <input type={show?"text":"password"} value={value} onChange={onChange} placeholder={placeholder||"••••••••"}
-        style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-          padding:"10px 36px 10px 12px",borderRadius:2,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+        style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+          padding:"10px 36px 10px 12px",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
       <button onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,top:"50%",
         transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",
         color:"#555",fontSize:14}}>{show?"🙈":"👁"}</button>
@@ -130,66 +130,12 @@ const PwField = ({ value, onChange, placeholder }) => {
   );
 };
 
-const S = {const THEME = {
-  bg: "#FFFFFF",
-  bgSecondary: "#F8FAFC", // Gris bleuté très léger
-  border: "#E2E8F0",
-  text: "#0F172A",
-  textLight: "#64748B",
-  primary: "#2563EB", 
-  yesBg: "#DCFCE7",
-  yesText: "#15803D",
-  noBg: "#FEE2E2",
-  noText: "#B91C1C"
-};
-
 const S = {
-  // Le conteneur principal (à appliquer sur la div parente)
-  app: {
-    backgroundColor: THEME.bgSecondary,
-    color: THEME.text,
-    fontFamily: "'Inter', -apple-system, sans-serif",
-    minHeight: "100vh",
-    paddingBottom: "80px" // Pour ne pas cacher le contenu derrière la barre mobile
-  },
-  // Style des cartes de paris
-  card: {
-    background: THEME.bg,
-    borderRadius: "16px",
-    border: `1px solid ${THEME.border}`,
-    padding: "20px",
-    marginBottom: "16px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-  },
-  // Boutons style "Pill"
-  btn: (bg, color, extra = {}) => ({
-    width: "100%",
-    padding: "12px",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-    background: bg,
-    color: color,
-    transition: "all 0.2s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    ...extra
-  }),
-  // Inputs clairs
-  input: {
-    width: "100%",
-    background: "#FFF",
-    border: `1px solid ${THEME.border}`,
-    color: THEME.text,
-    padding: "12px",
-    borderRadius: "10px",
-    fontSize: "15px",
-    outline: "none",
-    boxSizing: "border-box"
-  }
+  btn:(bg,color,extra={})=>({
+    width:"100%",padding:"11px",borderRadius:6,border:"none",cursor:"pointer",
+    fontWeight:"bold",fontSize:11,fontFamily:"'Courier New',monospace",letterSpacing:1,
+    background:bg,color,marginTop:4,...extra
+  })
 };
 
 export default function SchoolMarket() {
@@ -275,6 +221,24 @@ export default function SchoolMarket() {
   const [bjPhase,  setBjPhase]  = useState("bet");
   const [bjResult, setBjResult] = useState(null);
   const [bjMsg,    setBjMsg]    = useState("");
+  // Slot machine
+  const [slotReels,   setSlotReels]   = useState(["🍒","🍒","🍒"]);
+  const [slotSpin,    setSlotSpin]    = useState(false);
+  const [slotResult,  setSlotResult]  = useState(null);
+  const [slotMsg,     setSlotMsg]     = useState("");
+  const [slotBet,     setSlotBet]     = useState(50);
+  // Slots
+  const [slotReels,   setSlotReels]   = useState(["🍒","🍒","🍒"]);
+  const [slotSpinning,setSlotSpinning]= useState(false);
+  const [slotMsg,     setSlotMsg]     = useState("");
+  const [slotBet,     setSlotBet]     = useState(50);
+  // Slot machine
+  const [slotBet,      setSlotBet]      = useState(100);
+  const [slotReels,    setSlotReels]    = useState(["🎰","🎰","🎰"]);
+  const [slotSpinning, setSlotSpinning] = useState(false);
+  const [slotResult,   setSlotResult]   = useState(null);
+  const [slotMsg,      setSlotMsg]      = useState("");
+  const [casinoTab,    setCasinoTab]    = useState("blackjack");
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
 
@@ -752,6 +716,139 @@ export default function SchoolMarket() {
     setBjResult(result); setBjMsg(msg);
   };
 
+  // ── SLOT MACHINE ─────────────────────────────────────────────────
+  const SLOT_SYMBOLS = ["💎","7️⃣","🍒","⭐","🍋","🔔","🍇","🎰"];
+  const SLOT_WEIGHTS = [2, 4, 8, 10, 12, 12, 14, 16]; // plus rare = plus petit
+
+  const slotRandom = () => {
+    const total = SLOT_WEIGHTS.reduce((a,b)=>a+b,0);
+    let r = Math.random()*total;
+    for (let i=0;i<SLOT_SYMBOLS.length;i++) {
+      r -= SLOT_WEIGHTS[i];
+      if (r<=0) return SLOT_SYMBOLS[i];
+    }
+    return SLOT_SYMBOLS[SLOT_SYMBOLS.length-1];
+  };
+
+  const slotSpin = () => {
+    const freshMe = usersRef.current.find(u=>u.id===me.id)||me;
+    const bet = parseInt(slotBet)||0;
+    if (bet<50) return showToast("Mise minimum : 50 SC","err");
+    if (bet>freshMe.wallet) return showToast("Pas assez de SC","err");
+    // Débiter
+    const newMe = {...freshMe, wallet:freshMe.wallet-bet};
+    saveU(usersRef.current.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    setSlotSpinning(true);
+    setSlotResult(null);
+    setSlotMsg("");
+
+    // Animation : changer rapidement les symboles
+    let ticks = 0;
+    const interval = setInterval(()=>{
+      setSlotReels([slotRandom(),slotRandom(),slotRandom()]);
+      ticks++;
+      if (ticks>12) {
+        clearInterval(interval);
+        const r1=slotRandom(), r2=slotRandom(), r3=slotRandom();
+        setSlotReels([r1,r2,r3]);
+        setSlotSpinning(false);
+        // Calculer le gain
+        const MULTIPLIERS = {"💎":20,"7️⃣":15,"🍒":10,"⭐":8,"🍋":5,"🔔":4,"🍇":3};
+        let gain = 0; let result = "lose"; let msg = "";
+        if (r1===r2&&r2===r3) {
+          const mult = MULTIPLIERS[r1]||2;
+          gain = bet*mult;
+          result = "win";
+          msg = `${r1}${r2}${r3} — JACKPOT x${mult} ! +${gain-bet} SC 🎉`;
+        } else if (r1===r2||r2===r3||r1===r3) {
+          gain = Math.round(bet*1.5);
+          result = "small";
+          msg = `Deux identiques ! +${gain-bet} SC`;
+        } else {
+          msg = `Rien... Perdu — ${bet} SC 😢`;
+        }
+        if (gain>0) {
+          const cur = usersRef.current;
+          const fm = cur.find(u=>u.id===me.id)||me;
+          const newMe2 = {...fm, wallet:fm.wallet+gain};
+          saveU(cur.map(u=>u.id===me.id?newMe2:u));
+          setMe(newMe2);
+        }
+        setSlotResult(result);
+        setSlotMsg(msg);
+      }
+    }, 80);
+  };
+
+  // ── SLOT MACHINE ─────────────────────────────────────────────────
+  const SLOT_SYMBOLS = ["💎","7️⃣","🍒","⭐","🍋","🔔","🍇","🃏"];
+  const SLOT_PAYOUTS = {
+    "💎💎💎":20, "7️⃣7️⃣7️⃣":15, "🍒🍒🍒":10,
+    "⭐⭐⭐":8,  "🍋🍋🍋":5,   "🔔🔔🔔":6,
+    "🍇🍇🍇":7, "🃏🃏🃏":25,
+  };
+
+  const slotSpin = () => {
+    if (slotSpinning) return;
+    const cur = usersRef.current;
+    const freshMe = cur.find(u=>u.id===me.id)||me;
+    const bet = parseInt(slotBet)||0;
+    if (bet<50) return showToast("Mise minimum : 50 SC","err");
+    if (bet>freshMe.wallet) return showToast("Pas assez de SC","err");
+    // Débiter
+    const newMe = {...freshMe, wallet:freshMe.wallet-bet};
+    saveU(cur.map(u=>u.id===me.id?newMe:u));
+    setMe(newMe);
+    setSlotSpinning(true);
+    setSlotResult(null);
+    setSlotMsg("");
+    // Animation — changer les symboles rapidement
+    let ticks = 0;
+    const interval = setInterval(()=>{
+      setSlotReels([
+        SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)],
+        SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)],
+        SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)],
+      ]);
+      ticks++;
+      if (ticks>=12) {
+        clearInterval(interval);
+        // Résultat final
+        const final = [
+          SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)],
+          SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)],
+          SLOT_SYMBOLS[Math.floor(Math.random()*SLOT_SYMBOLS.length)],
+        ];
+        setSlotReels(final);
+        setSlotSpinning(false);
+        // Calculer gain
+        const key = final.join("");
+        const cur2 = usersRef.current;
+        const freshMe2 = cur2.find(u=>u.id===me.id)||me;
+        let gain = 0; let msg = ""; let result = "lose";
+        if (SLOT_PAYOUTS[key]) {
+          gain = bet * SLOT_PAYOUTS[key];
+          result = "win";
+          msg = `🎉 JACKPOT ${final[0]}${final[1]}${final[2]} ! +${(gain-bet).toLocaleString()} SC (x${SLOT_PAYOUTS[key]})`;
+        } else if (final[0]===final[1]||final[1]===final[2]||final[0]===final[2]) {
+          gain = Math.round(bet*1.5);
+          result = "partial";
+          msg = `✨ 2 identiques ! +${(gain-bet).toLocaleString()} SC`;
+        } else {
+          msg = `😢 Perdu — ${bet} SC`;
+        }
+        if (gain>0) {
+          const newMe2 = {...freshMe2, wallet:freshMe2.wallet+gain};
+          saveU(cur2.map(u=>u.id===me.id?newMe2:u));
+          setMe(newMe2);
+        }
+        setSlotResult(result);
+        setSlotMsg(msg);
+      }
+    }, 80);
+  };
+
   // ── ÉPINGLER MARCHÉ ──────────────────────────────────────────────
   const pinMarket = (marketId) => {
     const alreadyPinned = marketsRef.current.find(m=>m.pinned);
@@ -887,7 +984,7 @@ export default function SchoolMarket() {
   const unreadCount = myUserFresh ? (myUserFresh.notifications||[]).filter(n=>!n.read).length : 0;
 
   if (!loaded) return (
-    <div style={{minHeight:"100vh",background:"#0d0d0d",display:"flex",alignItems:"center",
+    <div style={{minHeight:"100vh",background:"#0a0a0a",display:"flex",alignItems:"center",
       justifyContent:"center",fontFamily:"monospace",color:"#ffdc32",letterSpacing:4,fontSize:13}}>
       CHARGEMENT...
     </div>
@@ -895,7 +992,7 @@ export default function SchoolMarket() {
 
   // Mur de connexion — accès interdit sans compte
   if (!me) return (
-    <div style={{minHeight:"100vh",background:"#0d0d0d",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}>
+    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}>
       <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",
         backgroundImage:"linear-gradient(rgba(255,220,50,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,220,50,0.025) 1px,transparent 1px)",
         backgroundSize:"44px 44px"}}/>
@@ -904,7 +1001,7 @@ export default function SchoolMarket() {
           background:toast.type==="err"?"#1a0505":"#0a150a",
           border:`1px solid ${toast.type==="err"?"#ef4444":"#10b981"}`,
           color:toast.type==="err"?"#ef4444":"#10b981",
-          padding:"10px 20px",borderRadius:2,fontSize:11,fontWeight:"bold",
+          padding:"10px 20px",borderRadius:6,fontSize:11,fontWeight:"bold",
           letterSpacing:1,whiteSpace:"nowrap",boxShadow:"0 4px 20px rgba(0,0,0,0.5)"}}>
           {toast.msg}
         </div>
@@ -916,11 +1013,11 @@ export default function SchoolMarket() {
           </div>
           <div style={{fontSize:11,color:"#444",letterSpacing:2}}>MARCHÉ DE PRÉDICTION SCOLAIRE</div>
         </div>
-        <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:28}}>
+        <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:28}}>
           <div style={{display:"flex",gap:2,marginBottom:24}}>
             {[["login","CONNEXION"],["register","INSCRIPTION"]].map(([m,lbl])=>(
               <button key={m} onClick={()=>{setAuthMode(m);setAuthErr("");}}
-                style={{flex:1,padding:"8px",border:"none",borderRadius:2,cursor:"pointer",
+                style={{flex:1,padding:"8px",border:"none",borderRadius:6,cursor:"pointer",
                   fontWeight:"bold",fontSize:9,fontFamily:"inherit",letterSpacing:1,
                   background:authMode===m?"#ffdc32":"#1a1a1a",color:authMode===m?"#0d0d0d":"#444"}}>
                 {lbl}
@@ -934,7 +1031,7 @@ export default function SchoolMarket() {
                   <button key={a} onClick={()=>setAuthAvatar(a)} style={{
                     fontSize:18,background:authAvatar===a?"#ffdc3215":"transparent",
                     border:authAvatar===a?"2px solid #ffdc32":"2px solid transparent",
-                    borderRadius:4,padding:4,cursor:"pointer"}}>{a}</button>
+                    borderRadius:10,padding:4,cursor:"pointer"}}>{a}</button>
                 ))}
               </div>
             </Field>
@@ -942,8 +1039,8 @@ export default function SchoolMarket() {
           <Field label="PSEUDO">
             <input value={authPseudo} onChange={e=>setAuthPseudo(e.target.value)}
               placeholder="Ton pseudo..."
-              style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                padding:"10px 12px",borderRadius:2,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+              style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                padding:"10px 12px",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
           </Field>
           <Field label="MOT DE PASSE">
             <PwField value={authPw} onChange={e=>setAuthPw(e.target.value)}/>
@@ -953,7 +1050,7 @@ export default function SchoolMarket() {
               <PwField value={authPw2} onChange={e=>setAuthPw2(e.target.value)} placeholder="Répète ton mot de passe"/>
             </Field>
           )}
-          {authErr && <div style={{color:"#ef4444",fontSize:11,marginBottom:12,padding:"8px 12px",background:"#1a0505",borderRadius:2}}>{authErr}</div>}
+          {authErr && <div style={{color:"#ef4444",fontSize:11,marginBottom:16,padding:"8px 12px",background:"#1a0505",borderRadius:6}}>{authErr}</div>}
           <button onClick={authMode==="login"?handleLogin:handleRegister}
             style={{...S.btn("#ffdc32","#0d0d0d")}}>
             {authMode==="login"?"→ SE CONNECTER":"→ CRÉER MON COMPTE"}
@@ -973,13 +1070,13 @@ export default function SchoolMarket() {
       {adminPwModal && (
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:4,padding:28,maxWidth:360,width:"100%"}}>
+          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:10,padding:32,maxWidth:360,width:"100%"}}>
             <div style={{fontSize:14,fontWeight:"bold",color:"#a855f7",marginBottom:16}}>👑 Connexion Admin</div>
             <PwField value={adminPwInput} onChange={e=>setAdminPwInput(e.target.value)} placeholder="Mot de passe admin..."/>
-            {adminPwErr&&<div style={{color:"#ef4444",fontSize:11,margin:"8px 0",padding:"6px 10px",background:"#1a0505",borderRadius:2}}>{adminPwErr}</div>}
-            <div style={{display:"flex",gap:8,marginTop:12}}>
+            {adminPwErr&&<div style={{color:"#ef4444",fontSize:11,margin:"8px 0",padding:"6px 10px",background:"#1a0505",borderRadius:6}}>{adminPwErr}</div>}
+            <div style={{display:"flex",gap:16,marginTop:12}}>
               <button onClick={()=>{setAdminPwModal(false);setAdminPwInput("");setAdminPwErr("");}}
-                style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>Annuler</button>
+                style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #2a2a2a"})}}>Annuler</button>
               <button onClick={handleAdminLogin} style={{...S.btn("#a855f7","#fff",{flex:1})}}>→ ENTRER</button>
             </div>
           </div>
@@ -989,7 +1086,7 @@ export default function SchoolMarket() {
   );
 
   return (
-    <div style={{minHeight:"100vh",background:"#0d0d0d",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}
+    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Courier New',monospace",color:"#e8e0d0"}}
       onClick={()=>setNotifOpen(false)}>
       <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",
         backgroundImage:"linear-gradient(rgba(255,220,50,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,220,50,0.025) 1px,transparent 1px)",
@@ -1000,7 +1097,7 @@ export default function SchoolMarket() {
           background:toast.type==="err"?"#1a0505":"#0a150a",
           border:`1px solid ${toast.type==="err"?"#ef4444":"#10b981"}`,
           color:toast.type==="err"?"#ef4444":"#10b981",
-          padding:"10px 20px",borderRadius:2,fontSize:11,fontWeight:"bold",
+          padding:"10px 20px",borderRadius:6,fontSize:11,fontWeight:"bold",
           letterSpacing:1,whiteSpace:"nowrap",boxShadow:"0 4px 20px rgba(0,0,0,0.5)"}}>
           {toast.msg}
         </div>
@@ -1008,7 +1105,7 @@ export default function SchoolMarket() {
 
       {/* HEADER */}
       <header style={{position:"sticky",top:0,zIndex:100,background:"rgba(13,13,13,0.97)",
-        backdropFilter:"blur(12px)",borderBottom:"1px solid #1a1a1a",height:58,
+        backdropFilter:"blur(12px)",borderBottom:"1px solid #222",height:64,
         display:"flex",alignItems:"center",padding:"0 20px",gap:16}}>
         <div style={{fontWeight:"bold",fontSize:14,letterSpacing:2,color:"#ffdc32",
           cursor:"pointer",flexShrink:0}} onClick={()=>setView("markets")}>
@@ -1019,7 +1116,7 @@ export default function SchoolMarket() {
             <button key={v} onClick={()=>setView(v)} style={{
               background:view===v?"#ffdc3215":"transparent",
               color:view===v?"#ffdc32":"#555",border:"none",
-              padding:"6px 12px",borderRadius:2,cursor:"pointer",
+              padding:"6px 12px",borderRadius:6,cursor:"pointer",
               fontSize:9,fontWeight:"bold",fontFamily:"inherit",
               letterSpacing:1,whiteSpace:"nowrap"}}>
               {lbl}
@@ -1029,7 +1126,7 @@ export default function SchoolMarket() {
             <button onClick={()=>setView("admin")} style={{
               background:view==="admin"?"#a855f715":"transparent",
               color:view==="admin"?"#a855f7":"#444",border:"none",
-              padding:"6px 12px",borderRadius:2,cursor:"pointer",
+              padding:"6px 12px",borderRadius:6,cursor:"pointer",
               fontSize:9,fontWeight:"bold",fontFamily:"inherit",letterSpacing:1,position:"relative"}}>
               👑 ADMIN
               {pendingRenames.length>0&&(
@@ -1041,14 +1138,14 @@ export default function SchoolMarket() {
             </button>
           )}
         </nav>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+        <div style={{display:"flex",gap:16,alignItems:"center",flexShrink:0}}>
           {me ? (
             <>
               {/* Cloche notifs */}
               <div style={{position:"relative"}} onClick={e=>e.stopPropagation()}>
                 <button onClick={()=>{setNotifOpen(o=>!o); if(unreadCount>0) markNotifsRead();}}
-                  style={{background:"transparent",border:"1px solid #252525",color:"#ccc",
-                    padding:"5px 9px",borderRadius:2,cursor:"pointer",fontSize:14,
+                  style={{background:"transparent",border:"1px solid #2a2a2a",color:"#ccc",
+                    padding:"5px 9px",borderRadius:6,cursor:"pointer",fontSize:14,
                     position:"relative"}}>
                   🔔
                   {unreadCount>0&&(
@@ -1061,9 +1158,9 @@ export default function SchoolMarket() {
                 </button>
                 {notifOpen && (
                   <div style={{position:"absolute",right:0,top:40,width:300,background:"#111",
-                    border:"1px solid #252525",borderRadius:4,zIndex:300,
+                    border:"1px solid #2a2a2a",borderRadius:10,zIndex:300,
                     boxShadow:"0 8px 32px rgba(0,0,0,0.6)",overflow:"hidden"}}>
-                    <div style={{padding:"10px 14px",borderBottom:"1px solid #1a1a1a",
+                    <div style={{padding:"10px 14px",borderBottom:"1px solid #222",
                       fontSize:9,color:"#555",letterSpacing:2,fontWeight:"bold"}}>
                       NOTIFICATIONS
                     </div>
@@ -1073,10 +1170,10 @@ export default function SchoolMarket() {
                           Aucune notification
                         </div>
                       ) : [...(myUserFresh?.notifications||[])].reverse().map(n=>(
-                        <div key={n.id} style={{padding:"10px 14px",borderBottom:"1px solid #0d0d0d",
+                        <div key={n.id} style={{padding:"10px 14px",borderBottom:"1px solid #1a1a1a",
                           background:n.isAnnouncement?"#0a0a1a":n.read?"transparent":"#ffffff04",
                           borderLeft:n.isAnnouncement?"2px solid #6366f1":"2px solid transparent"}}>
-                          <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                          <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
                             <span style={{fontSize:16,flexShrink:0}}>{n.marketEmoji}</span>
                             <div style={{flex:1,minWidth:0}}>
                               <div style={{fontSize:10,color:n.isAnnouncement?"#a5b4fc":"#ccc",
@@ -1116,22 +1213,22 @@ export default function SchoolMarket() {
                 )}
               </div>
               <button onClick={()=>{setProfileUser(myUserFresh||me);setView("profile");}}
-                style={{background:"transparent",border:"1px solid #252525",color:"#ccc",
-                  padding:"5px 10px",borderRadius:2,cursor:"pointer",fontSize:10,
+                style={{background:"transparent",border:"1px solid #2a2a2a",color:"#ccc",
+                  padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:10,
                   fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:14}}>{me.avatar}</span>
                 <span style={{fontSize:10}}>{me.pseudo}</span>
                 <span style={{fontSize:11,color:"#ffdc32",fontWeight:"bold"}}>{(myUserFresh||me).wallet.toLocaleString()} SC</span>
               </button>
               <button onClick={()=>{setMe(null);setView("markets");}}
-                style={{background:"transparent",border:"1px solid #252525",color:"#444",
-                  padding:"5px 8px",borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
+                style={{background:"transparent",border:"1px solid #2a2a2a",color:"#444",
+                  padding:"5px 8px",borderRadius:6,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
                 ⎋
               </button>
             </>
           ) : (
             <button onClick={()=>setView("auth")} style={{background:"#ffdc32",color:"#0d0d0d",
-              border:"none",padding:"6px 14px",borderRadius:2,cursor:"pointer",
+              border:"none",padding:"6px 14px",borderRadius:6,cursor:"pointer",
               fontWeight:"bold",fontSize:9,fontFamily:"inherit",letterSpacing:1}}>
               CONNEXION →
             </button>
@@ -1142,11 +1239,11 @@ export default function SchoolMarket() {
       {/* AUTH */}
       {view==="auth" && (
         <div style={{maxWidth:400,margin:"60px auto",padding:"0 20px"}}>
-          <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:28}}>
+          <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:28}}>
             <div style={{display:"flex",gap:2,marginBottom:24}}>
               {[["login","CONNEXION"],["register","INSCRIPTION"]].map(([m,lbl])=>(
                 <button key={m} onClick={()=>{setAuthMode(m);setAuthErr("");}}
-                  style={{flex:1,padding:"8px",border:"none",borderRadius:2,cursor:"pointer",
+                  style={{flex:1,padding:"8px",border:"none",borderRadius:6,cursor:"pointer",
                     fontWeight:"bold",fontSize:9,fontFamily:"inherit",letterSpacing:1,
                     background:authMode===m?"#ffdc32":"#1a1a1a",color:authMode===m?"#0d0d0d":"#444"}}>
                   {lbl}
@@ -1160,7 +1257,7 @@ export default function SchoolMarket() {
                     <button key={a} onClick={()=>setAuthAvatar(a)} style={{
                       fontSize:18,background:authAvatar===a?"#ffdc3215":"transparent",
                       border:authAvatar===a?"2px solid #ffdc32":"2px solid transparent",
-                      borderRadius:4,padding:4,cursor:"pointer"}}>{a}</button>
+                      borderRadius:10,padding:4,cursor:"pointer"}}>{a}</button>
                   ))}
                 </div>
               </Field>
@@ -1168,8 +1265,8 @@ export default function SchoolMarket() {
             <Field label="PSEUDO">
               <input value={authPseudo} onChange={e=>setAuthPseudo(e.target.value)}
                 placeholder="Ton pseudo..."
-                style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                  padding:"10px 12px",borderRadius:2,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                  padding:"10px 12px",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
             </Field>
             <Field label="MOT DE PASSE">
               <PwField value={authPw} onChange={e=>setAuthPw(e.target.value)}/>
@@ -1179,7 +1276,7 @@ export default function SchoolMarket() {
                 <PwField value={authPw2} onChange={e=>setAuthPw2(e.target.value)} placeholder="Répète ton mot de passe"/>
               </Field>
             )}
-            {authErr && <div style={{color:"#ef4444",fontSize:11,marginBottom:12,padding:"8px 12px",background:"#1a0505",borderRadius:2}}>{authErr}</div>}
+            {authErr && <div style={{color:"#ef4444",fontSize:11,marginBottom:16,padding:"8px 12px",background:"#1a0505",borderRadius:6}}>{authErr}</div>}
             <button onClick={authMode==="login"?handleLogin:handleRegister}
               style={{...S.btn("#ffdc32","#0d0d0d")}}>
               {authMode==="login"?"→ SE CONNECTER":"→ CRÉER MON COMPTE"}
@@ -1213,21 +1310,21 @@ export default function SchoolMarket() {
               color:"#444",cursor:"pointer",fontSize:11,fontFamily:"inherit",marginBottom:16,padding:0}}>
               ← Retour
             </button>
-            <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:24,marginBottom:16}}>
+            <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:24,marginBottom:16}}>
               <div style={{display:"flex",gap:16,alignItems:"flex-start",flexWrap:"wrap"}}>
                 <div style={{fontSize:52}}>{pu.avatar}</div>
                 <div style={{flex:1}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                     <div style={{fontSize:20,fontWeight:"bold"}}>{pu.pseudo}</div>
-                    {pu.isAdmin&&<span style={{fontSize:9,color:"#a855f7",background:"#a855f715",padding:"2px 8px",borderRadius:2}}>ADMIN</span>}
-                    {pu.banned&&<span style={{fontSize:9,color:"#ef4444",background:"#1a0505",padding:"2px 8px",borderRadius:2}}>BANNI</span>}
+                    {pu.isAdmin&&<span style={{fontSize:9,color:"#a855f7",background:"#a855f715",padding:"2px 8px",borderRadius:6}}>ADMIN</span>}
+                    {pu.banned&&<span style={{fontSize:9,color:"#ef4444",background:"#1a0505",padding:"2px 8px",borderRadius:6}}>BANNI</span>}
                   </div>
                   <div style={{fontSize:22,fontWeight:"bold",color:"#ffdc32",marginTop:6}}>
                     {pu.wallet.toLocaleString()} SC
                   </div>
                   {pu.debt>0 && (
                     <div style={{fontSize:10,color:"#ef4444",marginTop:4,padding:"4px 10px",
-                      background:"#1a0505",borderRadius:2,border:"1px solid #ef444430",
+                      background:"#1a0505",borderRadius:6,border:"1px solid #ef444430",
                       display:"inline-flex",alignItems:"center",gap:6}}>
                       💳 Crédit en cours : {pu.debt} SC — remboursé automatiquement à 500 SC
                     </div>
@@ -1264,49 +1361,49 @@ export default function SchoolMarket() {
                 <div style={{marginTop:16,paddingTop:16,borderTop:"1px solid #1a1a1a"}}>
                   {canRenameNow ? (
                     <>
-                      <div style={{fontSize:10,color:"#10b981",marginBottom:8,background:"#0a150a",
-                        padding:"8px 12px",borderRadius:2,border:"1px solid #10b98130"}}>
+                      <div style={{fontSize:10,color:"#10b981",marginBottom:16,background:"#0a150a",
+                        padding:"8px 12px",borderRadius:6,border:"1px solid #10b98130"}}>
                         ✅ L'admin a autorisé ton changement de pseudo !
                       </div>
                       <div style={{display:"flex",gap:8}}>
                         <input value={myRenamInput} onChange={e=>setMyRenamInput(e.target.value)}
                           placeholder="Nouveau pseudo..."
-                          style={{flex:1,background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                            padding:"8px 12px",borderRadius:2,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                          style={{flex:1,background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                            padding:"8px 12px",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                         <button onClick={applyRename} style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
-                          padding:"8px 14px",borderRadius:2,cursor:"pointer",fontWeight:"bold",
+                          padding:"8px 14px",borderRadius:6,cursor:"pointer",fontWeight:"bold",
                           fontSize:10,fontFamily:"inherit"}}>OK</button>
                       </div>
                       {myRenamErr&&<div style={{color:"#ef4444",fontSize:10,marginTop:6}}>{myRenamErr}</div>}
                     </>
                   ) : pu.renameRequest ? (
                     <div style={{fontSize:10,color:"#ffdc32",padding:"8px 12px",background:"#14120a",
-                      borderRadius:2,border:"1px solid #ffdc3220"}}>
+                      borderRadius:6,border:"1px solid #ffdc3220"}}>
                       ⏳ Demande en attente : « {pu.renameRequest} »
                     </div>
                   ) : (
                     <>
                       {!myRenamReq ? (
                         <button onClick={()=>setMyRenamReq(true)}
-                          style={{background:"transparent",border:"1px solid #252525",color:"#444",
-                            padding:"6px 14px",borderRadius:2,cursor:"pointer",fontSize:9,
+                          style={{background:"transparent",border:"1px solid #2a2a2a",color:"#444",
+                            padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:9,
                             fontFamily:"inherit",letterSpacing:1}}>
                           ✏️ Demander un changement de pseudo
                         </button>
                       ) : (
                         <>
-                          <div style={{display:"flex",gap:8,marginBottom:6}}>
+                          <div style={{display:"flex",gap:16,marginBottom:6}}>
                             <input value={myRenamInput} onChange={e=>setMyRenamInput(e.target.value)}
                               placeholder="Pseudo souhaité..."
-                              style={{flex:1,background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                                padding:"8px 12px",borderRadius:2,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                              style={{flex:1,background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                                padding:"8px 12px",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
                             <button onClick={requestRename}
                               style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
-                                padding:"8px 14px",borderRadius:2,cursor:"pointer",fontWeight:"bold",
+                                padding:"8px 14px",borderRadius:6,cursor:"pointer",fontWeight:"bold",
                                 fontSize:10,fontFamily:"inherit"}}>Envoyer</button>
                             <button onClick={()=>{setMyRenamReq(false);setMyRenamInput("");setMyRenamErr("");}}
-                              style={{background:"transparent",border:"1px solid #252525",color:"#444",
-                                padding:"8px 12px",borderRadius:2,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕</button>
+                              style={{background:"transparent",border:"1px solid #2a2a2a",color:"#444",
+                                padding:"8px 12px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕</button>
                           </div>
                           {myRenamErr&&<div style={{color:"#ef4444",fontSize:10}}>{myRenamErr}</div>}
                         </>
@@ -1318,15 +1415,15 @@ export default function SchoolMarket() {
             </div>
             {/* ── BADGES DE PALIER ── */}
             {(pu.unlockedMilestones||[]).length>0 && (
-              <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
-                padding:"14px 18px",marginBottom:16}}>
+              <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,
+                padding:"18px 22px",marginBottom:16}}>
                 <div style={{fontSize:9,color:"#444",letterSpacing:2,fontWeight:"bold",marginBottom:10}}>
                   🏆 PALIERS ATTEINTS
                 </div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
                   {MILESTONES.filter(m=>(pu.unlockedMilestones||[]).includes(m.id)).map(m=>(
                     <div key={m.id} style={{background:"#111",border:`1px solid ${m.color}40`,
-                      borderRadius:3,padding:"6px 12px",display:"flex",alignItems:"center",gap:6}}>
+                      borderRadius:8,padding:"6px 12px",display:"flex",alignItems:"center",gap:6}}>
                       <span style={{fontSize:13}}>{m.name.split(" ")[0]}</span>
                       <div>
                         <div style={{fontSize:10,fontWeight:"bold",color:m.color}}>{m.name.slice(m.name.indexOf(" ")+1)}</div>
@@ -1362,8 +1459,8 @@ export default function SchoolMarket() {
               const isUp = pu.wallet >= (points[0]?.val||pu.wallet);
               const lineColor = isUp ? "#10b981" : "#ef4444";
               return (
-                <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,marginBottom:16,overflow:"hidden"}}>
-                  <div style={{padding:"12px 16px",borderBottom:"1px solid #1a1a1a",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,marginBottom:16,overflow:"hidden"}}>
+                  <div style={{padding:"12px 16px",borderBottom:"1px solid #222",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div style={{fontSize:10,fontWeight:"bold",color:"#444",letterSpacing:2}}>ÉVOLUTION DU WALLET</div>
                     <div style={{fontSize:11,fontWeight:"bold",color:isUp?"#10b981":"#ef4444"}}>
                       {isUp?"↗":"↘"} {pu.wallet.toLocaleString()} SC
@@ -1398,15 +1495,15 @@ export default function SchoolMarket() {
                 </div>
               );
             })()}
-            <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px",borderBottom:"1px solid #1a1a1a",fontSize:10,
+            <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,overflow:"hidden"}}>
+              <div style={{padding:"12px 16px",borderBottom:"1px solid #222",fontSize:10,
                 fontWeight:"bold",color:"#444",letterSpacing:2}}>HISTORIQUE DES PARIS</div>
               {myBets.length===0 ? (
                 <div style={{padding:20,textAlign:"center",color:"#2a2a2a",fontSize:12}}>Aucun pari</div>
               ) : myBets.slice().reverse().map((b,i)=>{
                 const won=b.market.resolved?b.market.result===b.side:null;
                 return (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",borderBottom:"1px solid #0d0d0d"}}>
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",borderBottom:"1px solid #1a1a1a"}}>
                     <span style={{fontSize:18,flexShrink:0}}>{b.market.emoji}</span>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:"bold",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.market.title}</div>
@@ -1427,7 +1524,7 @@ export default function SchoolMarket() {
       {view==="markets" && (
         <>
           <div style={{background:"linear-gradient(135deg,#140f00,#0d0d0d 55%,#001209)",
-            borderBottom:"1px solid #1a1a1a",padding:"26px 20px 20px",position:"relative",zIndex:1}}>
+            borderBottom:"1px solid #222",padding:"26px 20px 20px",position:"relative",zIndex:1}}>
             <div style={{maxWidth:1080,margin:"0 auto"}}>
               <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>MARCHÉ DE PRÉDICTION SCOLAIRE</div>
               <div style={{fontSize:24,fontWeight:"bold",lineHeight:1.3,marginBottom:12}}>
@@ -1455,20 +1552,20 @@ export default function SchoolMarket() {
                   <div style={{fontSize:8,color:"#ffd700",letterSpacing:3,fontWeight:"bold",marginBottom:8}}>
                     ⭐ PARI EN VEDETTE
                   </div>
-                  <div style={{background:"#0f0f0f",border:"2px solid #ffd70040",borderRadius:4,padding:16,
+                  <div style={{background:"#111",border:"2px solid #ffd70040",borderRadius:10,padding:20,
                     boxShadow:"0 0 20px #ffd70010"}}>
-                    <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
+                    <div style={{display:"flex",gap:16,alignItems:"flex-start",flexWrap:"wrap"}}>
                       <span style={{fontSize:28}}>{featured.emoji}</span>
                       <div style={{flex:1,minWidth:200}}>
                         <div style={{fontSize:14,fontWeight:"bold",marginBottom:6,color:"#fff"}}>
                           {featured.title}
                         </div>
                         <div style={{display:"flex",gap:4,marginBottom:6}}>
-                          <div style={{flex:odds.yesPct,background:"#10b98120",height:6,borderRadius:2,position:"relative",overflow:"hidden"}}>
-                            <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:2}}/>
+                          <div style={{flex:odds.yesPct,background:"#10b98120",height:6,borderRadius:6,position:"relative",overflow:"hidden"}}>
+                            <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:6}}/>
                           </div>
-                          <div style={{flex:odds.noPct,background:"#ef444420",height:6,borderRadius:2,position:"relative",overflow:"hidden"}}>
-                            <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:2}}/>
+                          <div style={{flex:odds.noPct,background:"#ef444420",height:6,borderRadius:6,position:"relative",overflow:"hidden"}}>
+                            <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:6}}/>
                           </div>
                         </div>
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:10}}>
@@ -1481,7 +1578,7 @@ export default function SchoolMarket() {
                         {!myBet && me && !me.banned && !isMine && (
                           <button onClick={()=>{setBetModal(featured);setBetSide(null);setBetAmount(50);}}
                             style={{background:"#ffd700",color:"#0d0d0d",border:"none",
-                              padding:"8px 16px",borderRadius:2,cursor:"pointer",
+                              padding:"8px 16px",borderRadius:6,cursor:"pointer",
                               fontSize:10,fontWeight:"bold",fontFamily:"inherit"}}>
                             → PARIER
                           </button>
@@ -1489,7 +1586,7 @@ export default function SchoolMarket() {
                         {myBet && (
                           <div style={{fontSize:10,color:myBet.side==="yes"?"#10b981":"#ef4444",
                             background:myBet.side==="yes"?"#0a150a":"#1a0505",
-                            padding:"6px 10px",borderRadius:2,border:`1px solid ${myBet.side==="yes"?"#10b98130":"#ef444430"}`}}>
+                            padding:"6px 10px",borderRadius:6,border:`1px solid ${myBet.side==="yes"?"#10b98130":"#ef444430"}`}}>
                             ✓ {myBet.side==="yes"?"OUI":"NON"} · {myBet.amount} SC
                           </div>
                         )}
@@ -1510,7 +1607,7 @@ export default function SchoolMarket() {
             return (
               <div style={{background:"linear-gradient(90deg,#0a0a1a,#0d0d0d,#0a0a1a)",
                 borderBottom:"1px solid #6366f130",padding:"10px 20px"}}>
-                <div style={{maxWidth:1080,margin:"0 auto",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <div style={{maxWidth:1080,margin:"0 auto",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                   <div style={{fontSize:9,color:"#6366f1",letterSpacing:3,fontWeight:"bold",whiteSpace:"nowrap"}}>
                     🎰 LOTERIE DE LA SEMAINE
                   </div>
@@ -1523,7 +1620,7 @@ export default function SchoolMarket() {
                     </span>
                     {alreadyIn && (
                       <span style={{fontSize:9,color:"#10b981",background:"#0a150a",
-                        padding:"2px 8px",borderRadius:2,border:"1px solid #10b98130"}}>
+                        padding:"2px 8px",borderRadius:6,border:"1px solid #10b98130"}}>
                         🎟 Tu as ton ticket !
                       </span>
                     )}
@@ -1531,7 +1628,7 @@ export default function SchoolMarket() {
                   {!alreadyIn && (
                     <button onClick={buyLotteryTicket}
                       style={{background:"#6366f1",color:"#fff",border:"none",
-                        padding:"5px 14px",borderRadius:2,cursor:"pointer",
+                        padding:"5px 14px",borderRadius:6,cursor:"pointer",
                         fontSize:9,fontWeight:"bold",fontFamily:"inherit",
                         letterSpacing:1,flexShrink:0,whiteSpace:"nowrap"}}>
                       🎟 Ticket — 50 SC
@@ -1543,19 +1640,19 @@ export default function SchoolMarket() {
           })()}
 
           <div style={{position:"sticky",top:58,zIndex:90,background:"rgba(13,13,13,0.97)",
-            backdropFilter:"blur(12px)",borderBottom:"1px solid #1a1a1a",
+            backdropFilter:"blur(12px)",borderBottom:"1px solid #222",
             padding:"0 20px",display:"flex",gap:4,alignItems:"center",height:44,overflowX:"auto"}}>
             {["tous","profs","eleves","cours","vie scolaire","hors les murs"].map(cat=>(
               <button key={cat} onClick={()=>setFilter(cat)} style={{
                 background:filter===cat?"#ffdc32":"transparent",color:filter===cat?"#0d0d0d":"#555",
-                border:filter===cat?"none":"1px solid #252525",padding:"4px 12px",borderRadius:2,
+                border:filter===cat?"none":"1px solid #252525",padding:"4px 12px",borderRadius:6,
                 cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit",
                 letterSpacing:1,textTransform:"uppercase",whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>
             ))}
             <div style={{flex:1}}/>
             {me && !me.banned && (
               <button onClick={()=>setCreateOpen(true)} style={{background:"#ffdc32",color:"#0d0d0d",
-                border:"none",padding:"5px 12px",borderRadius:2,cursor:"pointer",
+                border:"none",padding:"5px 12px",borderRadius:6,cursor:"pointer",
                 fontWeight:"bold",fontSize:9,fontFamily:"inherit",letterSpacing:1,flexShrink:0}}>
                 + CRÉER ({markets.filter(m=>m.creatorId===me.id&&!m.resolved).length}/2)
               </button>
@@ -1575,29 +1672,29 @@ export default function SchoolMarket() {
                 const myBet=myBetOn(mkt);
                 const isMine=mkt.creatorId===me?.id;
                 return (
-                  <div key={mkt.id} style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
-                    padding:16,cursor:"pointer",transition:"border-color 0.15s",
+                  <div key={mkt.id} style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,
+                    padding:20,cursor:"pointer",transition:"border-color 0.15s",
                     opacity:mkt.resolved?0.6:1,position:"relative"}}
                     onMouseEnter={e=>!mkt.resolved&&(e.currentTarget.style.borderColor="#333")}
                     onMouseLeave={e=>e.currentTarget.style.borderColor="#1a1a1a"}>
                     <div style={{position:"absolute",top:10,right:10,fontSize:8,fontWeight:"bold",
                       letterSpacing:2,color:CAT_COLOR[mkt.category]||"#444",
-                      background:`${CAT_COLOR[mkt.category]||"#444"}15`,padding:"2px 6px",borderRadius:2}}>
+                      background:`${CAT_COLOR[mkt.category]||"#444"}15`,padding:"2px 6px",borderRadius:6}}>
                       {mkt.category?.toUpperCase()}
                     </div>
                     <div style={{fontSize:22,marginBottom:8}}>{mkt.emoji}</div>
                     <div style={{fontSize:13,fontWeight:"bold",lineHeight:1.4,marginBottom:10,paddingRight:60}}>
                       {mkt.title}
                       {mkt.resolved&&<span style={{marginLeft:8,fontSize:9,color:mkt.result==="yes"?"#10b981":"#ef4444",
-                        background:mkt.result==="yes"?"#0a150a":"#1a0505",padding:"2px 6px",borderRadius:2}}>
+                        background:mkt.result==="yes"?"#0a150a":"#1a0505",padding:"2px 6px",borderRadius:6}}>
                         {mkt.result==="yes"?"✅ OUI":"❌ NON"}</span>}
                     </div>
                     <div style={{display:"flex",gap:4,marginBottom:10}}>
-                      <div style={{flex:odds.yesPct,background:"#10b98120",height:6,borderRadius:2,position:"relative",overflow:"hidden"}}>
-                        <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:2}}/>
+                      <div style={{flex:odds.yesPct,background:"#10b98120",height:6,borderRadius:6,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:6}}/>
                       </div>
-                      <div style={{flex:odds.noPct,background:"#ef444420",height:6,borderRadius:2,position:"relative",overflow:"hidden"}}>
-                        <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:2}}/>
+                      <div style={{flex:odds.noPct,background:"#ef444420",height:6,borderRadius:6,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:6}}/>
                       </div>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444",marginBottom:8}}>
@@ -1616,7 +1713,7 @@ export default function SchoolMarket() {
                         const emoji = myBet.side==="yes"?"✅":"❌";
                         return (
                           <div style={{fontSize:9,color:"#fff",marginBottom:10,padding:"5px 8px",
-                            background:"#0a0a0a",borderRadius:2,textAlign:"center"}}>
+                            background:"#0a0a0a",borderRadius:6,textAlign:"center"}}>
                             {emoji} <span style={{fontWeight:"bold"}}>{label} {ref100} SC →</span> <span style={{color,fontWeight:"bold"}}>{gainSide} SC</span>
                           </div>
                         );
@@ -1624,7 +1721,7 @@ export default function SchoolMarket() {
                       return (
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:9,
                           color:"#333",marginBottom:10,padding:"5px 8px",
-                          background:"#0a0a0a",borderRadius:2}}>
+                          background:"#0a0a0a",borderRadius:6}}>
                           <span>✅ {label} {ref100} SC → <span style={{color:"#10b981",fontWeight:"bold"}}>{odds.yesTotal>0?Math.round(ref100*odds.total/odds.yesTotal):ref100} SC</span></span>
                           <span>❌ {label} {ref100} SC → <span style={{color:"#ef4444",fontWeight:"bold"}}>{odds.noTotal>0?Math.round(ref100*odds.total/odds.noTotal):ref100} SC</span></span>
                         </div>
@@ -1642,7 +1739,7 @@ export default function SchoolMarket() {
                         {!mkt.resolved && me && !me.banned && !myBet && !isMine && (
                           <button onClick={e=>{e.stopPropagation();setBetModal(mkt);setBetSide(null);setBetAmount(50);}}
                             style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
-                              padding:"5px 10px",borderRadius:2,cursor:"pointer",
+                              padding:"5px 10px",borderRadius:6,cursor:"pointer",
                               fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                             → PARIER
                           </button>
@@ -1650,22 +1747,22 @@ export default function SchoolMarket() {
                         {myBet && !mkt.resolved && (
                           <button onClick={e=>{e.stopPropagation();setDelConfirm({type:"bet",market:mkt});}}
                             style={{background:"#ef444415",color:"#ef4444",border:"1px solid #ef444430",
-                              padding:"5px 8px",borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
+                              padding:"5px 8px",borderRadius:6,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
                             ↩ {myBet.side==="yes"?"OUI":"NON"} · {myBet.amount} SC
                           </button>
                         )}
                         {myBet && (
                           <div style={{fontSize:9,color:myBet.side==="yes"?"#10b981":"#ef4444",
                             background:myBet.side==="yes"?"#0a150a":"#1a0505",
-                            padding:"5px 8px",borderRadius:2,border:`1px solid ${myBet.side==="yes"?"#10b98130":"#ef444430"}`}}>
+                            padding:"5px 8px",borderRadius:6,border:`1px solid ${myBet.side==="yes"?"#10b98130":"#ef444430"}`}}>
                             {mkt.resolved?(myBet.side===mkt.result?"GAGNÉ 🎉":"PERDU 😢"):
                               `✓ ${myBet.side==="yes"?"OUI":"NON"} · ${myBet.amount} SC`}
                           </div>
                         )}
                         {(isMine||isAdmin) && !mkt.resolved && (
                           <button onClick={e=>{e.stopPropagation();setDelConfirm({type:"market",market:mkt});}}
-                            style={{background:"transparent",border:"1px solid #252525",color:"#333",
-                              padding:"5px 8px",borderRadius:2,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+                            style={{background:"transparent",border:"1px solid #2a2a2a",color:"#333",
+                              padding:"5px 8px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
                             🗑
                           </button>
                         )}
@@ -1675,14 +1772,14 @@ export default function SchoolMarket() {
                       <button onClick={e=>{e.stopPropagation();setResolveModal(mkt);}}
                         style={{marginTop:8,width:"100%",background:"#a855f715",
                           border:"1px solid #a855f730",color:"#a855f7",padding:"6px",
-                          borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit",fontWeight:"bold",letterSpacing:1}}>
+                          borderRadius:6,cursor:"pointer",fontSize:9,fontFamily:"inherit",fontWeight:"bold",letterSpacing:1}}>
                         👑 CLÔTURER CE MARCHÉ</button>
                     )}
                     {isAdmin&&mkt.resolved&&(
                       <button onClick={e=>{e.stopPropagation();setDelConfirm({type:"market",market:mkt});}}
                         style={{marginTop:8,width:"100%",background:"#ef444410",
                           border:"1px solid #ef444425",color:"#ef4444",padding:"6px",
-                          borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit",fontWeight:"bold",letterSpacing:1}}>
+                          borderRadius:6,cursor:"pointer",fontSize:9,fontFamily:"inherit",fontWeight:"bold",letterSpacing:1}}>
                         🗑 SUPPRIMER CE MARCHÉ RÉSOLU</button>
                     )}
                   </div>
@@ -1709,14 +1806,14 @@ export default function SchoolMarket() {
             const total = adminStats.wins + adminStats.losses;
             return (
               <div style={{background:"linear-gradient(135deg,#1a0a2e,#0d0d0d)",
-                border:"1px solid #a855f730",borderRadius:4,padding:"14px 18px",
+                border:"1px solid #a855f730",borderRadius:10,padding:"18px 22px",
                 marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
                 <div style={{fontSize:36}}>{admin.avatar}</div>
                 <div style={{flex:1}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                  <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:2}}>
                     <span style={{fontSize:14,fontWeight:"bold",color:"#a855f7"}}>{admin.pseudo}</span>
                     <span style={{fontSize:8,color:"#a855f7",background:"#a855f715",
-                      padding:"2px 7px",borderRadius:2,letterSpacing:2}}>ORGANISATEUR</span>
+                      padding:"2px 7px",borderRadius:6,letterSpacing:2}}>ORGANISATEUR</span>
                   </div>
                   <div style={{fontSize:9,color:"#555"}}>
                     Créateur de SchoolMarket · Hors compétition
@@ -1742,10 +1839,10 @@ export default function SchoolMarket() {
 
           {/* Meilleur / Pire de la semaine dans le classement */}
           {(weeklyBestUser || weeklyWorstUser) && (
-            <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:16,marginBottom:20,flexWrap:"wrap"}}>
               {weeklyBestUser && (
                 <div style={{flex:1,minWidth:200,background:"#0a1a0a",border:"1px solid #10b98130",
-                  borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
+                  borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:9,color:"#10b981",letterSpacing:2,fontWeight:"bold",whiteSpace:"nowrap"}}>⭐ MEILLEUR</span>
                   <span style={{fontSize:16}}>{weeklyBestUser.avatar}</span>
                   <span style={{fontSize:12,fontWeight:"bold",color:"#10b981"}}>{weeklyBestUser.pseudo}</span>
@@ -1754,7 +1851,7 @@ export default function SchoolMarket() {
               )}
               {weeklyWorstUser && (
                 <div style={{flex:1,minWidth:200,background:"#1a0505",border:"1px solid #ef444430",
-                  borderRadius:4,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
+                  borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:9,color:"#ef4444",letterSpacing:2,fontWeight:"bold",whiteSpace:"nowrap"}}>🤡 PIRE</span>
                   <span style={{fontSize:16}}>{weeklyWorstUser.avatar}</span>
                   <span style={{fontSize:12,fontWeight:"bold",color:"#ef4444"}}>{weeklyWorstUser.pseudo}</span>
@@ -1771,7 +1868,7 @@ export default function SchoolMarket() {
           ) : (
             <>
               {leaderboard.length>=1&&(
-                <div style={{display:"flex",gap:8,marginBottom:22,alignItems:"flex-end"}}>
+                <div style={{display:"flex",gap:16,marginBottom:22,alignItems:"flex-end"}}>
                   {[leaderboard[1],leaderboard[0],leaderboard[2]].map((u,i)=>{
                     if(!u) return <div key={i} style={{flex:1}}/>;
                     const colors=["#94a3b8","#ffdc32","#cd7c2f"];
@@ -1780,8 +1877,8 @@ export default function SchoolMarket() {
                     const pColor=u.equipped?.pseudoColor?SHOP_ITEMS.find(s=>s.id===u.equipped.pseudoColor)?.color:null;
                     const badge=u.equipped?.badge?SHOP_ITEMS.find(s=>s.id===u.equipped.badge):null;
                     return (
-                      <div key={u.id} style={{flex:1,background:"#0f0f0f",border:`1px solid ${colors[i]}22`,
-                        borderRadius:4,padding:14,textAlign:"center",height:heights[i],
+                      <div key={u.id} style={{flex:1,background:"#111",border:`1px solid ${colors[i]}22`,
+                        borderRadius:10,padding:18,textAlign:"center",height:heights[i],
                         display:"flex",flexDirection:"column",justifyContent:"flex-end",cursor:"pointer",
                         transition:"border-color 0.15s"}}
                         onMouseEnter={e=>e.currentTarget.style.borderColor=colors[i]}
@@ -1801,9 +1898,9 @@ export default function SchoolMarket() {
                   })}
                 </div>
               )}
-              <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,overflow:"hidden"}}>
+              <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,overflow:"hidden"}}>
                 <div style={{display:"grid",gridTemplateColumns:"44px 1fr 60px 60px 60px 80px",
-                  padding:"8px 16px",borderBottom:"1px solid #1a1a1a"}}>
+                  padding:"8px 16px",borderBottom:"1px solid #222"}}>
                   {["#","JOUEUR","V","D","W/R","PROFIT"].map(h=>(
                     <div key={h} style={{fontSize:8,color:"#444",fontWeight:"bold",letterSpacing:2,
                       textAlign:h==="JOUEUR"?"left":"right"}}>{h}</div>
@@ -1817,7 +1914,7 @@ export default function SchoolMarket() {
                   const frame=u.equipped?.frame?SHOP_ITEMS.find(s=>s.id===u.equipped.frame):null;
                   return (
                     <div key={u.id} style={{display:"grid",gridTemplateColumns:"44px 1fr 60px 60px 60px 80px",
-                      padding:"11px 16px",borderBottom:"1px solid #111",
+                      padding:"14px 20px",borderBottom:"1px solid #1a1a1a",
                       background:isMe?"#ffdc3206":"transparent",
                       borderLeft:isMe?"3px solid #ffdc32":"3px solid transparent",
                       cursor:"pointer",position:"relative"}}
@@ -1837,7 +1934,7 @@ export default function SchoolMarket() {
                               textShadow:pColor?`0 0 8px ${pColor}55`:undefined}}>
                               {u.pseudo}{isMe?" (toi)":""}
                             </span>
-                            {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:2}}>ADMIN</span>}
+                            {u.isAdmin&&<span style={{fontSize:8,color:"#a855f7",background:"#a855f715",padding:"1px 5px",borderRadius:6}}>ADMIN</span>}
                             {u.banned&&<span style={{marginLeft:4,fontSize:8,color:"#ef4444"}}>BANNI</span>}
                             {u.streak>=2&&<span style={{fontSize:9,fontWeight:"bold",color:"#f97316"}}>🔥{u.streak}</span>}
                           </div>
@@ -1879,29 +1976,29 @@ export default function SchoolMarket() {
                 const myBet=(mkt.bets||[]).find(b=>b.userId===me?.id);
                 const won=myBet?myBet.side===mkt.result:null;
                 return (
-                  <div key={mkt.id} style={{background:"#0f0f0f",border:`1px solid ${mkt.result==="yes"?"#10b98130":"#ef444430"}`,
-                    borderRadius:4,padding:16,position:"relative",opacity:0.85}}>
+                  <div key={mkt.id} style={{background:"#111",border:`1px solid ${mkt.result==="yes"?"#10b98130":"#ef444430"}`,
+                    borderRadius:10,padding:20,position:"relative",opacity:0.85}}>
                     {/* Badge catégorie */}
                     <div style={{position:"absolute",top:10,right:10,fontSize:8,fontWeight:"bold",
                       letterSpacing:2,color:CAT_COLOR[mkt.category]||"#444",
-                      background:`${CAT_COLOR[mkt.category]||"#444"}15`,padding:"2px 6px",borderRadius:2}}>
+                      background:`${CAT_COLOR[mkt.category]||"#444"}15`,padding:"2px 6px",borderRadius:6}}>
                       {mkt.category?.toUpperCase()}
                     </div>
                     <div style={{fontSize:22,marginBottom:8}}>{mkt.emoji}</div>
-                    <div style={{fontSize:13,fontWeight:"bold",lineHeight:1.4,marginBottom:8,paddingRight:60}}>
+                    <div style={{fontSize:13,fontWeight:"bold",lineHeight:1.4,marginBottom:16,paddingRight:60}}>
                       {mkt.title}
                       <span style={{marginLeft:8,fontSize:9,color:mkt.result==="yes"?"#10b981":"#ef4444",
-                        background:mkt.result==="yes"?"#0a150a":"#1a0505",padding:"2px 6px",borderRadius:2}}>
+                        background:mkt.result==="yes"?"#0a150a":"#1a0505",padding:"2px 6px",borderRadius:6}}>
                         {mkt.result==="yes"?"✅ OUI":"❌ NON"}
                       </span>
                     </div>
                     {/* Barre OUI/NON */}
                     <div style={{display:"flex",gap:4,marginBottom:8}}>
-                      <div style={{flex:odds.yesPct,background:"#10b98120",height:5,borderRadius:2,position:"relative",overflow:"hidden"}}>
-                        <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:2}}/>
+                      <div style={{flex:odds.yesPct,background:"#10b98120",height:5,borderRadius:6,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",inset:0,background:"#10b981",width:`${odds.yesPct}%`,borderRadius:6}}/>
                       </div>
-                      <div style={{flex:odds.noPct,background:"#ef444420",height:5,borderRadius:2,position:"relative",overflow:"hidden"}}>
-                        <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:2}}/>
+                      <div style={{flex:odds.noPct,background:"#ef444420",height:5,borderRadius:6,position:"relative",overflow:"hidden"}}>
+                        <div style={{position:"absolute",inset:0,background:"#ef4444",width:`${odds.noPct}%`,borderRadius:6}}/>
                       </div>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:10}}>
@@ -1911,7 +2008,7 @@ export default function SchoolMarket() {
                     </div>
                     {/* Résultat du joueur */}
                     {myBet && (
-                      <div style={{fontSize:10,padding:"6px 10px",borderRadius:2,marginBottom:8,
+                      <div style={{fontSize:10,padding:"6px 10px",borderRadius:6,marginBottom:16,
                         background:won?"#0a150a":"#1a0505",
                         border:`1px solid ${won?"#10b98130":"#ef444430"}`,
                         color:won?"#10b981":"#ef4444"}}>
@@ -1924,7 +2021,7 @@ export default function SchoolMarket() {
                       {isAdmin && (
                         <button onClick={()=>setDelConfirm({type:"market",market:mkt})}
                           style={{background:"#ef444410",border:"1px solid #ef444425",color:"#ef4444",
-                            padding:"4px 8px",borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
+                            padding:"4px 8px",borderRadius:6,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
                           🗑 Supprimer
                         </button>
                       )}
@@ -1948,23 +2045,23 @@ export default function SchoolMarket() {
 
           {/* Solde + équipés */}
           {me && (
-            <div style={{background:"#0f0f0f",border:"1px solid #ffdc3230",borderRadius:4,
-              padding:"14px 18px",marginBottom:24,display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
+            <div style={{background:"#111",border:"1px solid #ffdc3230",borderRadius:10,
+              padding:"18px 22px",marginBottom:24,display:"flex",gap:20,flexWrap:"wrap",alignItems:"center"}}>
               <div>
                 <div style={{fontSize:8,color:"#555",letterSpacing:2,marginBottom:3}}>TON SOLDE</div>
                 <div style={{fontSize:20,fontWeight:"bold",color:"#ffdc32"}}>
                   💰 {(myUserFresh||me).wallet.toLocaleString()} SC
                 </div>
               </div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
                 {["pseudoColor","badge","frame"].map(type=>{
                   const freshMe=myUserFresh||me;
                   const eqId=freshMe.equipped?.[type];
                   const eqItem=eqId?SHOP_ITEMS.find(i=>i.id===eqId):null;
                   const labels={pseudoColor:"Couleur",badge:"Badge",frame:"Cadre"};
                   return (
-                    <div key={type} style={{background:"#111",border:"1px solid #252525",
-                      borderRadius:3,padding:"6px 10px",minWidth:100}}>
+                    <div key={type} style={{background:"#111",border:"1px solid #2a2a2a",
+                      borderRadius:8,padding:"6px 10px",minWidth:100}}>
                       <div style={{fontSize:8,color:"#444",letterSpacing:2,marginBottom:3}}>{labels[type].toUpperCase()}</div>
                       {eqItem ? (
                         <div style={{display:"flex",alignItems:"center",gap:5}}>
@@ -2003,23 +2100,23 @@ export default function SchoolMarket() {
                   const tooPoor = me && !owned && freshMe.wallet<item.price;
                   const rc = RARITY_COLOR[item.rarity];
                   return (
-                    <div key={item.id} style={{background:"#0f0f0f",border:`1px solid ${rc}33`,
-                      borderRadius:4,padding:14,opacity:tooPoor?0.5:1,position:"relative"}}>
+                    <div key={item.id} style={{background:"#111",border:`1px solid ${rc}33`,
+                      borderRadius:10,padding:18,opacity:tooPoor?0.5:1,position:"relative"}}>
                       <div style={{position:"absolute",top:8,right:8,fontSize:7,fontWeight:"bold",
-                        letterSpacing:2,color:rc,background:`${rc}20`,padding:"1px 5px",borderRadius:2,
+                        letterSpacing:2,color:rc,background:`${rc}20`,padding:"1px 5px",borderRadius:6,
                         textTransform:"uppercase"}}>{item.rarity}</div>
                       <div style={{fontSize:24,marginBottom:6}}>{item.icon}</div>
                       <div style={{fontSize:12,fontWeight:"bold",marginBottom:2}}>{item.name}</div>
-                      <div style={{fontSize:9,color:"#444",marginBottom:8,lineHeight:1.4}}>{item.desc}</div>
+                      <div style={{fontSize:9,color:"#444",marginBottom:16,lineHeight:1.4}}>{item.desc}</div>
                       {/* Aperçu */}
                       {item.type==="pseudoColor"&&(
-                        <div style={{fontSize:11,fontWeight:"bold",marginBottom:8,
+                        <div style={{fontSize:11,fontWeight:"bold",marginBottom:16,
                           color:item.color,textShadow:`0 0 8px ${item.color}55`}}>
                           Aperçu pseudo ✦
                         </div>
                       )}
                       {item.type==="frame"&&(
-                        <div style={{height:5,borderRadius:2,background:item.frameColor,marginBottom:8}}/>
+                        <div style={{height:5,borderRadius:6,background:item.frameColor,marginBottom:8}}/>
                       )}
                       {item.type==="badge"&&(
                         <div style={{fontSize:10,color:rc,marginBottom:8}}>{item.name}</div>
@@ -2031,7 +2128,7 @@ export default function SchoolMarket() {
                         {!me ? (
                           <button onClick={()=>setView("auth")}
                             style={{background:"#ffdc3220",color:"#ffdc32",border:"none",
-                              padding:"4px 8px",borderRadius:2,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
+                              padding:"4px 8px",borderRadius:6,cursor:"pointer",fontSize:9,fontFamily:"inherit"}}>
                             Connexion
                           </button>
                         ) : owned ? (
@@ -2039,7 +2136,7 @@ export default function SchoolMarket() {
                             style={{background:isEquipped?"#ef444415":"#10b98115",
                               border:`1px solid ${isEquipped?"#ef444440":"#10b98140"}`,
                               color:isEquipped?"#ef4444":"#10b981",
-                              padding:"4px 8px",borderRadius:2,cursor:"pointer",
+                              padding:"4px 8px",borderRadius:6,cursor:"pointer",
                               fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                             {isEquipped?"✕ Retirer":"✓ Équiper"}
                           </button>
@@ -2047,7 +2144,7 @@ export default function SchoolMarket() {
                           <button onClick={()=>buyItem(item)} disabled={tooPoor}
                             style={{background:canBuy?"#ffdc32":"#1a1a1a",
                               color:canBuy?"#0d0d0d":"#444",border:"none",
-                              padding:"4px 8px",borderRadius:2,
+                              padding:"4px 8px",borderRadius:6,
                               cursor:canBuy?"pointer":"not-allowed",
                               fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                             {tooPoor?"SC insuffisants":"→ Acheter"}
@@ -2120,8 +2217,8 @@ export default function SchoolMarket() {
         const yesRatio=allBets.length>0?Math.round(yesTotal/allBets.length*100):50;
 
         const StatCard = ({title, value, sub, color="#ffdc32", emoji}) => (
-          <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:"16px 18px"}}>
-            <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8,fontWeight:"bold"}}>{emoji} {title}</div>
+          <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:"16px 18px"}}>
+            <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:16,fontWeight:"bold"}}>{emoji} {title}</div>
             <div style={{fontSize:20,fontWeight:"bold",color,marginBottom:sub?4:0}}>{value}</div>
             {sub&&<div style={{fontSize:10,color:"#444",lineHeight:1.4}}>{sub}</div>}
           </div>
@@ -2135,7 +2232,7 @@ export default function SchoolMarket() {
             </div>
 
             <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>ÉCONOMIE</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8,marginBottom:24}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:16,marginBottom:24}}>
               <StatCard emoji="💰" title="SC EN CIRCULATION" value={totalSC.toLocaleString()+" SC"} sub={`Parmi ${players.length} joueur${players.length>1?"s":""}`}/>
               <StatCard emoji="🎲" title="SC MISÉS AU TOTAL" value={totalMise.toLocaleString()+" SC"} sub={`${allBets.length} paris passés`}/>
               <StatCard emoji="🏆" title="SC DISTRIBUÉS EN GAINS" value={totalGains.toLocaleString()+" SC"} sub={`Sur ${resolvedMkts.length} marchés clôturés`}/>
@@ -2143,7 +2240,7 @@ export default function SchoolMarket() {
             </div>
 
             <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>MARCHÉS</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8,marginBottom:24}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:16,marginBottom:24}}>
               <StatCard emoji="🔥" title="PLUS POPULAIRE" value={mostPopular?`${mostPopular.emoji} ${mostPopular.title.slice(0,30)}...`:"—"} sub={mostPopular?`${(mostPopular.bets||[]).reduce((s,b)=>s+b.amount,0).toLocaleString()} SC misés`:null} color="#f97316"/>
               <StatCard emoji="👥" title="PLUS DE PARIEURS" value={mostBettors?`${mostBettors.emoji} ${mostBettors.title.slice(0,30)}...`:"—"} sub={mostBettors?`${(mostBettors.bets||[]).filter(b=>!b.isPenalty).length} parieurs`:null} color="#22d3ee"/>
               <StatCard emoji="📂" title="CATÉGORIE LA + ACTIVE" value={topCat?topCat[0].toUpperCase():"—"} sub={topCat?`${topCat[1]} marché${topCat[1]>1?"s":""}`:null} color={topCat?CAT_COLOR[topCat[0]]:"#444"}/>
@@ -2151,7 +2248,7 @@ export default function SchoolMarket() {
             </div>
 
             <div style={{fontSize:9,color:"#555",letterSpacing:2,marginBottom:10,fontWeight:"bold"}}>JOUEURS</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:8,marginBottom:24}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:16,marginBottom:24}}>
               <StatCard emoji="⚡" title="JOUEUR LE + ACTIF" value={mostActive?`${mostActive.avatar} ${mostActive.pseudo}`:"—"} sub={mostActive?`${betsByPlayer[mostActive.id]} paris passés`:null} color="#a855f7"/>
               <StatCard emoji="🎯" title="MEILLEUR WIN RATE" value={bestWinRate?`${bestWinRate.avatar} ${bestWinRate.pseudo}`:"—"} sub={bestWinRate?`${bestWinRate.winRate}% (min. 5 paris)`:null} color="#10b981"/>
               <StatCard emoji="💸" title="PLUS GROS GAIN" value={biggestWin.pseudo?`${biggestWin.pseudo}`:"—"} sub={biggestWin.pseudo?`+${biggestWin.gain.toLocaleString()} SC sur "${biggestWin.market?.slice(0,25)}..."`:null} color="#ffd700"/>
@@ -2166,136 +2263,197 @@ export default function SchoolMarket() {
         );
       })()}
 
-      {/* CASINO — BLACKJACK */}
+      {/* CASINO */}
       {view==="casino" && (
         <div style={{maxWidth:600,margin:"0 auto",padding:"28px 20px",position:"relative",zIndex:1}}>
-          <div style={{marginBottom:24}}>
+          <div style={{marginBottom:20}}>
             <div style={{fontSize:8,color:"#ffdc32",letterSpacing:4,marginBottom:5}}>JOUE TON CAPITAL</div>
-            <div style={{fontSize:24,fontWeight:"bold"}}>🃏 Blackjack</div>
-            <div style={{fontSize:11,color:"#444",marginTop:4}}>Toi contre le croupier. Le plus proche de 21 sans dépasser.</div>
+            <div style={{fontSize:24,fontWeight:"bold"}}>🎰 Casino</div>
           </div>
 
           {/* Solde */}
-          <div style={{background:"#0f0f0f",border:"1px solid #ffdc3230",borderRadius:4,
-            padding:"12px 18px",marginBottom:20,display:"flex",alignItems:"center",gap:12}}>
+          <div style={{background:"#111",border:"1px solid #ffdc3230",borderRadius:10,
+            padding:"12px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
             <div style={{fontSize:9,color:"#555",letterSpacing:2}}>TON SOLDE</div>
             <div style={{fontSize:20,fontWeight:"bold",color:"#ffdc32"}}>
               💰 {(myUserFresh||me).wallet.toLocaleString()} SC
             </div>
           </div>
 
-          {bjPhase==="bet" && (
-            <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:28,textAlign:"center"}}>
-              <div style={{fontSize:11,color:"#444",letterSpacing:2,marginBottom:16}}>TA MISE</div>
-              <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:16,flexWrap:"wrap"}}>
-                {[50,100,200,500,1000].map(v=>(
-                  <button key={v} onClick={()=>setBjBet(v)}
-                    style={{background:bjBet===v?"#ffdc32":"#1a1a1a",color:bjBet===v?"#0d0d0d":"#555",
-                      border:bjBet===v?"none":"1px solid #252525",padding:"8px 16px",borderRadius:2,
-                      cursor:"pointer",fontWeight:"bold",fontSize:11,fontFamily:"inherit"}}>
-                    {v} SC
-                  </button>
-                ))}
-              </div>
-              <input type="number" value={bjBet} min={50} onChange={e=>setBjBet(e.target.value)}
-                style={{background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                  padding:"10px 16px",borderRadius:2,fontSize:16,fontFamily:"inherit",
-                  outline:"none",width:140,textAlign:"center",marginBottom:20}}/>
-              <div/>
-              <button onClick={bjStart}
-                style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
-                  padding:"12px 32px",borderRadius:2,cursor:"pointer",
-                  fontWeight:"bold",fontSize:13,fontFamily:"inherit",letterSpacing:1}}>
-                🃏 JOUER
+          {/* Onglets */}
+          <div style={{display:"flex",gap:4,marginBottom:20}}>
+            {[["blackjack","🃏 Blackjack"],["slots","🎰 Slot Machine"]].map(([t,lbl])=>(
+              <button key={t} onClick={()=>setCasinoTab(t)} style={{
+                flex:1,background:casinoTab===t?"#ffdc32":"#111",
+                color:casinoTab===t?"#0d0d0d":"#555",
+                border:casinoTab===t?"none":"1px solid #252525",
+                padding:"8px",borderRadius:6,cursor:"pointer",
+                fontWeight:"bold",fontSize:10,fontFamily:"inherit",letterSpacing:1}}>
+                {lbl}
               </button>
-              <div style={{fontSize:9,color:"#333",marginTop:12}}>Mise min : 50 SC · Blackjack = x1.5</div>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {(bjPhase==="play"||bjPhase==="done") && (()=>{
-            const CardComp = ({card, hidden=false}) => (
-              <div style={{
-                width:56,height:80,background:hidden?"#1a1a1a":"#fff",
-                border:`2px solid ${hidden?"#333":["♥","♦"].includes(card?.s)?"#ef4444":"#1a1a1a"}`,
-                borderRadius:6,display:"flex",flexDirection:"column",
-                alignItems:"center",justifyContent:"center",
-                color:hidden?"transparent":["♥","♦"].includes(card?.s)?"#ef4444":"#111",
-                fontSize:hidden?20:15,fontWeight:"bold",position:"relative",
-                boxShadow:"0 2px 8px rgba(0,0,0,0.4)"}}>
-                {hidden ? <span style={{color:"#333",fontSize:24}}>?</span> : <>
-                  <div style={{position:"absolute",top:4,left:6,fontSize:11,lineHeight:1}}>{card.v}</div>
-                  <div style={{fontSize:20}}>{card.s}</div>
-                  <div style={{position:"absolute",bottom:4,right:6,fontSize:11,lineHeight:1,transform:"rotate(180deg)"}}>{card.v}</div>
-                </>}
+          {/* BLACKJACK */}
+          {casinoTab==="blackjack" && (<>
+            {bjPhase==="bet" && (
+              <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:32,textAlign:"center"}}>
+                <div style={{fontSize:11,color:"#444",letterSpacing:2,marginBottom:16}}>TA MISE</div>
+                <div style={{display:"flex",gap:16,justifyContent:"center",marginBottom:16,flexWrap:"wrap"}}>
+                  {[50,100,200,500,1000].map(v=>(
+                    <button key={v} onClick={()=>setBjBet(v)}
+                      style={{background:bjBet===v?"#ffdc32":"#1a1a1a",color:bjBet===v?"#0d0d0d":"#555",
+                        border:bjBet===v?"none":"1px solid #252525",padding:"8px 16px",borderRadius:6,
+                        cursor:"pointer",fontWeight:"bold",fontSize:11,fontFamily:"inherit"}}>
+                      {v} SC
+                    </button>
+                  ))}
+                </div>
+                <input type="number" value={bjBet} min={50} onChange={e=>setBjBet(e.target.value)}
+                  style={{background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                    padding:"10px 16px",borderRadius:6,fontSize:16,fontFamily:"inherit",
+                    outline:"none",width:140,textAlign:"center",marginBottom:20}}/>
+                <div/>
+                <button onClick={bjStart}
+                  style={{background:"#ffdc32",color:"#0d0d0d",border:"none",
+                    padding:"12px 32px",borderRadius:6,cursor:"pointer",
+                    fontWeight:"bold",fontSize:13,fontFamily:"inherit",letterSpacing:1}}>
+                  🃏 JOUER
+                </button>
+                <div style={{fontSize:9,color:"#333",marginTop:12}}>Mise min : 50 SC · Blackjack = x1.5</div>
               </div>
-            );
-            const pVal = bjHandValue(bjPlayer);
-            const dVal = bjPhase==="done" ? bjHandValue(bjDealer) : bjHandValue([bjDealer[0]]);
-            const resultColor = bjResult==="win"||bjResult==="blackjack"?"#10b981":bjResult==="push"?"#ffdc32":"#ef4444";
-            return (
-              <div>
-                {/* Croupier */}
-                <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:20,marginBottom:12}}>
-                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:12}}>
-                    CROUPIER {bjPhase==="done"?`— ${dVal}`:""}</div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {bjDealer.map((card,i)=>(
-                      <CardComp key={i} card={card} hidden={bjPhase==="play"&&i===1}/>
+            )}
+            {(bjPhase==="play"||bjPhase==="done") && (()=>{
+              const CardComp = ({card, hidden=false}) => (
+                <div style={{
+                  width:56,height:80,background:hidden?"#1a1a1a":"#fff",
+                  border:`2px solid ${hidden?"#333":["♥","♦"].includes(card?.s)?"#ef4444":"#1a1a1a"}`,
+                  borderRadius:6,display:"flex",flexDirection:"column",
+                  alignItems:"center",justifyContent:"center",
+                  color:hidden?"transparent":["♥","♦"].includes(card?.s)?"#ef4444":"#111",
+                  fontSize:hidden?20:15,fontWeight:"bold",position:"relative",
+                  boxShadow:"0 2px 8px rgba(0,0,0,0.4)"}}>
+                  {hidden ? <span style={{color:"#333",fontSize:24}}>?</span> : <>
+                    <div style={{position:"absolute",top:4,left:6,fontSize:11,lineHeight:1}}>{card.v}</div>
+                    <div style={{fontSize:20}}>{card.s}</div>
+                    <div style={{position:"absolute",bottom:4,right:6,fontSize:11,lineHeight:1,transform:"rotate(180deg)"}}>{card.v}</div>
+                  </>}
+                </div>
+              );
+              const pVal = bjHandValue(bjPlayer);
+              const dVal = bjPhase==="done" ? bjHandValue(bjDealer) : bjHandValue([bjDealer[0]]);
+              const resultColor = bjResult==="win"||bjResult==="blackjack"?"#10b981":bjResult==="push"?"#ffdc32":"#ef4444";
+              return (
+                <div>
+                  <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:20,marginBottom:12}}>
+                    <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:12}}>CROUPIER {bjPhase==="done"?`— ${dVal}`:""}</div>
+                    <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                      {bjDealer.map((card,i)=>(<CardComp key={i} card={card} hidden={bjPhase==="play"&&i===1}/>))}
+                    </div>
+                  </div>
+                  <div style={{background:"#111",border:`1px solid ${bjPhase==="done"?resultColor+"40":"#1a1a1a"}`,borderRadius:10,padding:20,marginBottom:16}}>
+                    <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:12}}>TOI — {pVal} {pVal>21?"💥":pVal===21?"⚡":""}</div>
+                    <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                      {bjPlayer.map((card,i)=>(<CardComp key={i} card={card}/>))}
+                    </div>
+                  </div>
+                  {bjPhase==="done"&&bjMsg&&(
+                    <div style={{background:resultColor+"15",border:`1px solid ${resultColor}40`,borderRadius:10,padding:"14px 20px",textAlign:"center",marginBottom:16}}>
+                      <div style={{fontSize:16,fontWeight:"bold",color:resultColor}}>{bjMsg}</div>
+                    </div>
+                  )}
+                  {bjPhase==="play"&&(
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={bjHit} style={{flex:1,background:"#10b981",color:"#fff",border:"none",padding:"12px",borderRadius:6,cursor:"pointer",fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>➕ TIRER</button>
+                      <button onClick={()=>bjStand()} style={{flex:1,background:"#ef4444",color:"#fff",border:"none",padding:"12px",borderRadius:6,cursor:"pointer",fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>✋ RESTER</button>
+                      {bjPlayer.length===2&&(<button onClick={bjDouble} style={{flex:1,background:"#f97316",color:"#fff",border:"none",padding:"12px",borderRadius:6,cursor:"pointer",fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>✖2 DOUBLER</button>)}
+                    </div>
+                  )}
+                  {bjPhase==="done"&&(
+                    <button onClick={()=>{setBjPhase("bet");setBjPlayer([]);setBjDealer([]);setBjResult(null);setBjMsg("");}}
+                      style={{width:"100%",background:"#ffdc32",color:"#0d0d0d",border:"none",padding:"12px",borderRadius:6,cursor:"pointer",fontWeight:"bold",fontSize:12,fontFamily:"inherit",marginTop:8}}>
+                      🔄 NOUVELLE PARTIE
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+          </>)}
+
+          {/* SLOT MACHINE */}
+          {casinoTab==="slots" && (
+            <div>
+              {/* Tableau des gains */}
+              <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,
+                padding:"12px 16px",marginBottom:16}}>
+                <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:16,fontWeight:"bold"}}>TABLEAU DES GAINS</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                  {[["💎💎💎","x20 🔥"],["7️⃣7️⃣7️⃣","x15"],["🍒🍒🍒","x10"],["⭐⭐⭐","x8"],["🍋🍋🍋","x5"],["🔔🔔🔔","x4"],["🍇🍇🍇","x3"],["2 identiques","x1.5"]].map(([sym,mult])=>(
+                    <div key={sym} style={{display:"flex",justifyContent:"space-between",fontSize:10,
+                      padding:"3px 6px",background:"#111",borderRadius:6}}>
+                      <span>{sym}</span>
+                      <span style={{color:"#ffdc32",fontWeight:"bold"}}>{mult}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Machine */}
+              <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:32,textAlign:"center"}}>
+                {/* Rouleaux */}
+                <div style={{display:"flex",gap:16,justifyContent:"center",marginBottom:24}}>
+                  {slotReels.map((sym,i)=>(
+                    <div key={i} style={{width:80,height:80,background:"#111",border:"2px solid #252525",
+                      borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:36,boxShadow:"inset 0 2px 8px rgba(0,0,0,0.5)",
+                      transition:slotSpinning?"none":"all 0.3s",
+                      filter:slotSpinning?"blur(2px)":"none",
+                      transform:slotSpinning?"scale(0.95)":"scale(1)"}}>
+                      {sym}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Résultat */}
+                {slotMsg && !slotSpinning && (
+                  <div style={{marginBottom:16,padding:"10px 16px",borderRadius:8,
+                    background:slotResult==="win"?"#0a150a":slotResult==="small"?"#1a1200":"#1a0505",
+                    border:`1px solid ${slotResult==="win"?"#10b98140":slotResult==="small"?"#ffdc3240":"#ef444440"}`,
+                    color:slotResult==="win"?"#10b981":slotResult==="small"?"#ffdc32":"#ef4444",
+                    fontWeight:"bold",fontSize:13}}>
+                    {slotMsg}
+                  </div>
+                )}
+
+                {/* Mise */}
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>MISE</div>
+                  <div style={{display:"flex",gap:6,justifyContent:"center",marginBottom:10,flexWrap:"wrap"}}>
+                    {[50,100,200,500,1000].map(v=>(
+                      <button key={v} onClick={()=>setSlotBet(v)}
+                        style={{background:slotBet===v?"#ffdc32":"#1a1a1a",color:slotBet===v?"#0d0d0d":"#555",
+                          border:slotBet===v?"none":"1px solid #252525",padding:"6px 12px",borderRadius:6,
+                          cursor:"pointer",fontWeight:"bold",fontSize:10,fontFamily:"inherit"}}>
+                        {v}
+                      </button>
                     ))}
                   </div>
+                  <input type="number" value={slotBet} min={50} onChange={e=>setSlotBet(e.target.value)}
+                    style={{background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                      padding:"8px 14px",borderRadius:6,fontSize:14,fontFamily:"inherit",
+                      outline:"none",width:120,textAlign:"center"}}/>
                 </div>
-                {/* Joueur */}
-                <div style={{background:"#0f0f0f",border:`1px solid ${bjPhase==="done"?resultColor+"40":"#1a1a1a"}`,
-                  borderRadius:4,padding:20,marginBottom:16}}>
-                  <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:12}}>
-                    TOI — {pVal} {pVal>21?"💥":pVal===21?"⚡":""}</div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {bjPlayer.map((card,i)=>(<CardComp key={i} card={card}/>))}
-                  </div>
-                </div>
-                {/* Résultat */}
-                {bjPhase==="done" && bjMsg && (
-                  <div style={{background:resultColor+"15",border:`1px solid ${resultColor}40`,
-                    borderRadius:4,padding:"14px 20px",textAlign:"center",marginBottom:16}}>
-                    <div style={{fontSize:16,fontWeight:"bold",color:resultColor}}>{bjMsg}</div>
-                  </div>
-                )}
-                {/* Boutons */}
-                {bjPhase==="play" && (
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={bjHit}
-                      style={{flex:1,background:"#10b981",color:"#fff",border:"none",
-                        padding:"12px",borderRadius:2,cursor:"pointer",
-                        fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>
-                      ➕ TIRER
-                    </button>
-                    <button onClick={()=>bjStand()}
-                      style={{flex:1,background:"#ef4444",color:"#fff",border:"none",
-                        padding:"12px",borderRadius:2,cursor:"pointer",
-                        fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>
-                      ✋ RESTER
-                    </button>
-                    {bjPlayer.length===2 && (
-                      <button onClick={bjDouble}
-                        style={{flex:1,background:"#f97316",color:"#fff",border:"none",
-                          padding:"12px",borderRadius:2,cursor:"pointer",
-                          fontWeight:"bold",fontSize:12,fontFamily:"inherit"}}>
-                        ✖2 DOUBLER
-                      </button>
-                    )}
-                  </div>
-                )}
-                {bjPhase==="done" && (
-                  <button onClick={()=>{setBjPhase("bet");setBjPlayer([]);setBjDealer([]);setBjResult(null);setBjMsg("");}}
-                    style={{width:"100%",background:"#ffdc32",color:"#0d0d0d",border:"none",
-                      padding:"12px",borderRadius:2,cursor:"pointer",
-                      fontWeight:"bold",fontSize:12,fontFamily:"inherit",marginTop:bjMsg?0:16}}>
-                    🔄 NOUVELLE PARTIE
-                  </button>
-                )}
+
+                <button onClick={slotSpin} disabled={slotSpinning}
+                  style={{background:slotSpinning?"#1a1a1a":"#ffdc32",
+                    color:slotSpinning?"#444":"#0d0d0d",border:"none",
+                    padding:"14px 40px",borderRadius:6,cursor:slotSpinning?"not-allowed":"pointer",
+                    fontWeight:"bold",fontSize:14,fontFamily:"inherit",letterSpacing:2}}>
+                  {slotSpinning?"⏳ ...":"🎰 SPIN !"}
+                </button>
               </div>
-            );
-          })()}
+            </div>
+          )}
         </div>
       )}
 
@@ -2306,19 +2464,19 @@ export default function SchoolMarket() {
             <div style={{fontSize:8,color:"#a855f7",letterSpacing:4,marginBottom:5}}>PANNEAU ADMINISTRATEUR</div>
             <div style={{fontSize:24,fontWeight:"bold"}}>👑 Admin Panel</div>
           </div>
-          <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid #1a1a1a",paddingBottom:12}}>
+          <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid #222",paddingBottom:12}}>
             {[["markets","📊 Marchés"],["users","👥 Joueurs"],["renames","✏️ Pseudos"+(pendingRenames.length>0?` (${pendingRenames.length})`:"")],["lottery","🎰 Loterie"],["announce","📢 Annonces"]].map(([t,lbl])=>(
               <button key={t} onClick={()=>setAdminTab(t)} style={{
                 background:adminTab===t?"#a855f715":"transparent",color:adminTab===t?"#a855f7":"#444",
                 border:adminTab===t?"1px solid #a855f730":"1px solid transparent",
-                padding:"6px 14px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",
+                padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",
                 fontFamily:"inherit",letterSpacing:1}}>{lbl}</button>
             ))}
           </div>
 
           {adminTab==="lottery" && (
             <div>
-              <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,padding:24,marginBottom:16}}>
+              <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,padding:24,marginBottom:16}}>
                 <div style={{fontSize:10,color:"#555",letterSpacing:2,marginBottom:16,fontWeight:"bold"}}>LOTERIE EN COURS</div>
                 {(()=>{
                   const weekKey = getWeekKey();
@@ -2347,14 +2505,14 @@ export default function SchoolMarket() {
                           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                             {participants.map(p=>(
                               <span key={p.userId} style={{fontSize:10,background:"#1a1a1a",
-                                padding:"3px 8px",borderRadius:2,color:"#ccc"}}>{p.pseudo}</span>
+                                padding:"3px 8px",borderRadius:6,color:"#ccc"}}>{p.pseudo}</span>
                             ))}
                           </div>
                         </div>
                       )}
                       <button onClick={drawLottery} disabled={!active}
                         style={{background:active?"#ffdc32":"#1a1a1a",color:active?"#0d0d0d":"#444",
-                          border:"none",padding:"10px 20px",borderRadius:2,
+                          border:"none",padding:"10px 20px",borderRadius:6,
                           cursor:active?"pointer":"not-allowed",
                           fontWeight:"bold",fontSize:11,fontFamily:"inherit",letterSpacing:1}}>
                         🎰 LANCER LE TIRAGE
@@ -2366,7 +2524,7 @@ export default function SchoolMarket() {
               </div>
 
               {/* Cashprize hebdo */}
-              <div style={{background:"#0f0f0f",border:"1px solid #ffd70030",borderRadius:4,padding:24}}>
+              <div style={{background:"#111",border:"1px solid #ffd70030",borderRadius:10,padding:24}}>
                 <div style={{fontSize:10,color:"#ffd700",letterSpacing:2,marginBottom:4,fontWeight:"bold"}}>⭐ CASHPRIZE MEILLEUR PARIEUR</div>
                 <div style={{fontSize:10,color:"#444",marginBottom:16}}>
                   Distribue une récompense au meilleur parieur de la semaine.
@@ -2374,10 +2532,10 @@ export default function SchoolMarket() {
                     ? <span style={{color:"#10b981"}}> Actuellement : {weeklyBestUser.avatar} {weeklyBestUser.pseudo} (+{weeklyBest.profit.toLocaleString()} SC)</span>
                     : <span style={{color:"#333"}}> Aucun éligible cette semaine.</span>}
                 </div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <div style={{display:"flex",gap:16,alignItems:"center"}}>
                   <input type="number" value={cashprizeAmt} onChange={e=>setCashprizeAmt(e.target.value)}
-                    min={1} style={{width:100,background:"#0d0d0d",border:"1px solid #252525",
-                      color:"#e8e0d0",padding:"8px 12px",borderRadius:2,fontSize:13,
+                    min={1} style={{width:100,background:"#0d0d0d",border:"1px solid #2a2a2a",
+                      color:"#e8e0d0",padding:"8px 12px",borderRadius:6,fontSize:13,
                       fontFamily:"inherit",outline:"none"}}/>
                   <span style={{fontSize:11,color:"#444"}}>SC</span>
                   <button onClick={()=>{
@@ -2401,7 +2559,7 @@ export default function SchoolMarket() {
                   }} disabled={!weeklyBestUser}
                     style={{background:weeklyBestUser?"#ffd700":"#1a1a1a",
                       color:weeklyBestUser?"#0d0d0d":"#444",border:"none",
-                      padding:"8px 16px",borderRadius:2,cursor:weeklyBestUser?"pointer":"not-allowed",
+                      padding:"8px 16px",borderRadius:6,cursor:weeklyBestUser?"pointer":"not-allowed",
                       fontWeight:"bold",fontSize:10,fontFamily:"inherit",letterSpacing:1}}>
                     🏆 ENVOYER LE CASHPRIZE
                   </button>
@@ -2412,7 +2570,7 @@ export default function SchoolMarket() {
 
           {adminTab==="announce" && (
             <div>
-              <div style={{background:"#0f0f0f",border:"1px solid #6366f130",borderRadius:4,padding:24}}>
+              <div style={{background:"#111",border:"1px solid #6366f130",borderRadius:10,padding:24}}>
                 <div style={{fontSize:10,color:"#6366f1",letterSpacing:2,marginBottom:16,fontWeight:"bold"}}>
                   📢 ENVOYER UNE ANNONCE À TOUS LES JOUEURS
                 </div>
@@ -2420,22 +2578,22 @@ export default function SchoolMarket() {
                   <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>TITRE</div>
                   <input value={annTitle} onChange={e=>setAnnTitle(e.target.value)}
                     maxLength={60}
-                    style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",
-                      color:"#e8e0d0",padding:"9px 12px",borderRadius:2,fontSize:12,
+                    style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",
+                      color:"#e8e0d0",padding:"9px 12px",borderRadius:6,fontSize:12,
                       fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
                 </div>
                 <div style={{marginBottom:16}}>
                   <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:6}}>MESSAGE</div>
                   <textarea value={annBody} onChange={e=>setAnnBody(e.target.value)}
                     rows={10}
-                    style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",
-                      color:"#e8e0d0",padding:"9px 12px",borderRadius:2,fontSize:11,
+                    style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",
+                      color:"#e8e0d0",padding:"9px 12px",borderRadius:6,fontSize:11,
                       fontFamily:"inherit",outline:"none",resize:"vertical",
                       boxSizing:"border-box",lineHeight:1.7}}/>
                 </div>
                 <button onClick={sendAnnouncement}
                   style={{background:"#6366f1",color:"#fff",border:"none",
-                    padding:"10px 20px",borderRadius:2,cursor:"pointer",
+                    padding:"10px 20px",borderRadius:6,cursor:"pointer",
                     fontWeight:"bold",fontSize:10,fontFamily:"inherit",letterSpacing:1}}>
                   📢 ENVOYER À TOUS
                 </button>
@@ -2452,8 +2610,8 @@ export default function SchoolMarket() {
               {[...markets].sort((a,b)=>b.ts-a.ts).map(mkt=>{
                 const odds=computeOdds(mkt);
                 return (
-                  <div key={mkt.id} style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
-                    padding:"14px 16px",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",
+                  <div key={mkt.id} style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,
+                    padding:"18px 20px",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap",
                     opacity:mkt.resolved?0.6:1}}>
                     <span style={{fontSize:20}}>{mkt.emoji}</span>
                     <div style={{flex:1,minWidth:200}}>
@@ -2470,12 +2628,12 @@ export default function SchoolMarket() {
                           style={{background:mkt.pinned?"#ffd70020":"transparent",
                             border:`1px solid ${mkt.pinned?"#ffd70050":"#252525"}`,
                             color:mkt.pinned?"#ffd700":"#555",
-                            padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+                            padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
                           📌
                         </button>
                         <button onClick={()=>setResolveModal(mkt)}
                           style={{background:"#a855f715",border:"1px solid #a855f730",color:"#a855f7",
-                            padding:"6px 12px",borderRadius:2,cursor:"pointer",fontSize:9,
+                            padding:"6px 12px",borderRadius:6,cursor:"pointer",fontSize:9,
                             fontWeight:"bold",fontFamily:"inherit",letterSpacing:1}}>
                           CLÔTURER
                         </button>
@@ -2483,7 +2641,7 @@ export default function SchoolMarket() {
                     )}
                     <button onClick={()=>setDelConfirm({type:"market",market:mkt})}
                       style={{background:"#ef444410",border:"1px solid #ef444425",color:"#ef4444",
-                        padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+                        padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
                       🗑
                     </button>
                   </div>
@@ -2495,8 +2653,8 @@ export default function SchoolMarket() {
           {adminTab==="users" && (
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {visibleUsers.map(u=>(
-                <div key={u.id} style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
-                  padding:"14px 16px",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                <div key={u.id} style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,
+                  padding:"18px 20px",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
                   <span style={{fontSize:20}}>{u.avatar}</span>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:"bold"}}>{u.pseudo}
@@ -2506,19 +2664,19 @@ export default function SchoolMarket() {
                   </div>
                   <button onClick={()=>{setWalletModal(u);setWalletAmt("");}}
                     style={{background:"#ffdc3215",border:"1px solid #ffdc3230",color:"#ffdc32",
-                      padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                      padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                     💰 Wallet
                   </button>
                   <button onClick={()=>{setRenamModal(u);setRenamInput("");setRenamErr("");}}
                     style={{background:"#3b82f615",border:"1px solid #3b82f630",color:"#3b82f6",
-                      padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                      padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                     ✏️ Renommer
                   </button>
                   <button onClick={()=>setBanConfirm(u)}
                     style={{background:u.banned?"#10b98115":"#ef444415",
                       border:`1px solid ${u.banned?"#10b98130":"#ef444430"}`,
                       color:u.banned?"#10b981":"#ef4444",
-                      padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                      padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                     {u.banned?"✅ Débannir":"🚫 Bannir"}
                   </button>
                 </div>
@@ -2530,8 +2688,8 @@ export default function SchoolMarket() {
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {pendingRenames.length===0&&<div style={{color:"#333",textAlign:"center",padding:40}}>Aucune demande en attente.</div>}
               {pendingRenames.map(u=>(
-                <div key={u.id} style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:4,
-                  padding:"14px 16px",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                <div key={u.id} style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:12,
+                  padding:"18px 20px",display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
                   <span style={{fontSize:20}}>{u.avatar}</span>
                   <div style={{flex:1}}>
                     <div style={{fontSize:12,fontWeight:"bold"}}>{u.pseudo}</div>
@@ -2539,17 +2697,17 @@ export default function SchoolMarket() {
                   </div>
                   <button onClick={()=>{setRenamModal(u);setRenamInput(u.renameRequest||"");setRenamErr("");}}
                     style={{background:"#3b82f615",border:"1px solid #3b82f630",color:"#3b82f6",
-                      padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                      padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                     ✏️ Renommer
                   </button>
                   <button onClick={()=>adminAllowRename(u.id)}
                     style={{background:"#10b98115",border:"1px solid #10b98130",color:"#10b981",
-                      padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                      padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                     ✅ Autoriser
                   </button>
                   <button onClick={()=>adminDenyRename(u.id)}
                     style={{background:"#ef444415",border:"1px solid #ef444430",color:"#ef4444",
-                      padding:"6px 10px",borderRadius:2,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
+                      padding:"6px 10px",borderRadius:6,cursor:"pointer",fontSize:9,fontWeight:"bold",fontFamily:"inherit"}}>
                     ❌ Refuser
                   </button>
                 </div>
@@ -2564,7 +2722,7 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>{setAdminPwModal(false);setAdminPwInput("");setAdminPwErr("");}}>
-          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:4,padding:28,maxWidth:340,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:10,padding:32,maxWidth:340,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:17,fontWeight:"bold",color:"#a855f7",marginBottom:16}}>👑 Connexion Admin</div>
             <PwField value={adminPwInput} onChange={e=>setAdminPwInput(e.target.value)} placeholder="Mot de passe admin"/>
@@ -2579,12 +2737,12 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setBetModal(null)}>
-          <div style={{background:"#111",border:"2px solid #ffdc32",borderRadius:4,padding:26,maxWidth:400,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #ffdc32",borderRadius:10,padding:26,maxWidth:400,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:20,marginBottom:4}}>{betModal.emoji}</div>
             <div style={{fontSize:14,fontWeight:"bold",marginBottom:14,lineHeight:1.4}}>{betModal.title}</div>
             <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>TON CHOIX</div>
-            <div style={{display:"flex",gap:8,marginBottom:16}}>
+            <div style={{display:"flex",gap:16,marginBottom:16}}>
               {[["yes","✅ OUI","#10b981"],["no","❌ NON","#ef4444"]].map(([s,lbl,c])=>{
                 const betOdds = computeOdds(betModal);
                 const cote = s==="yes"
@@ -2594,7 +2752,7 @@ export default function SchoolMarket() {
                   <button key={s} onClick={()=>setBetSide(s)} style={{flex:1,padding:"11px",
                     border:betSide===s?`2px solid ${c}`:"1px solid #252525",
                     background:betSide===s?`${c}18`:"#0d0d0d",color:betSide===s?c:"#555",
-                    borderRadius:2,cursor:"pointer",fontFamily:"inherit"}}>
+                    borderRadius:6,cursor:"pointer",fontFamily:"inherit"}}>
                     <div style={{fontWeight:"bold",fontSize:14}}>{lbl}</div>
                     <div style={{fontSize:11,marginTop:3,opacity:0.8}}>x{cote}</div>
                   </button>
@@ -2604,11 +2762,11 @@ export default function SchoolMarket() {
             <div style={{fontSize:9,color:"#444",letterSpacing:2,marginBottom:8}}>MISE (SC)</div>
             <div style={{display:"flex",gap:6,marginBottom:5}}>
               <input type="number" min={10} value={betAmount} onChange={e=>setBetAmount(e.target.value)}
-                style={{flex:1,background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                  padding:"9px 12px",borderRadius:2,fontSize:17,fontWeight:"bold",fontFamily:"inherit",outline:"none"}}/>
+                style={{flex:1,background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                  padding:"9px 12px",borderRadius:6,fontSize:17,fontWeight:"bold",fontFamily:"inherit",outline:"none"}}/>
               {[25,50,100,250].map(v=>(
-                <button key={v} onClick={()=>setBetAmount(v)} style={{background:"#0d0d0d",border:"1px solid #252525",
-                  color:"#555",padding:"0 8px",borderRadius:2,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0}}>{v}</button>
+                <button key={v} onClick={()=>setBetAmount(v)} style={{background:"#0d0d0d",border:"1px solid #2a2a2a",
+                  color:"#555",padding:"0 8px",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0}}>{v}</button>
               ))}
             </div>
             {!isAdmin && <div style={{fontSize:9,color:"#333",marginBottom:8}}>Solde : {me?.wallet?.toLocaleString()} SC</div>}
@@ -2623,8 +2781,8 @@ export default function SchoolMarket() {
               const gain = Math.round(amt * cote);
               const profit = gain - amt;
               return (
-                <div style={{background:"#0a150a",border:"1px solid #10b98130",borderRadius:2,
-                  padding:"8px 12px",marginBottom:12,fontSize:10}}>
+                <div style={{background:"#0a150a",border:"1px solid #10b98130",borderRadius:6,
+                  padding:"8px 12px",marginBottom:16,fontSize:10}}>
                   <span style={{color:"#444"}}>Gain potentiel : </span>
                   <span style={{color:"#10b981",fontWeight:"bold"}}>{gain.toLocaleString()} SC</span>
                   <span style={{color:"#10b98180"}}> (+{profit.toLocaleString()} SC · x{cote.toFixed(2)})</span>
@@ -2636,7 +2794,7 @@ export default function SchoolMarket() {
               {cursor:betSide?"pointer":"not-allowed"})}}>
               {betSide?`→ MISER ${betAmount} SC sur "${betSide==="yes"?"OUI":"NON"}`:"Choisis OUI ou NON d'abord"}
             </button>
-            <button onClick={()=>setBetModal(null)} style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
+            <button onClick={()=>setBetModal(null)} style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #222",fontSize:11})}}>Annuler</button>
           </div>
         </div>
       )}
@@ -2646,7 +2804,7 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setCreateOpen(false)}>
-          <div style={{background:"#111",border:"2px solid #ffdc32",borderRadius:4,padding:26,maxWidth:400,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #ffdc32",borderRadius:10,padding:26,maxWidth:400,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:17,fontWeight:"bold",color:"#ffdc32",marginBottom:3}}>Créer un marché</div>
             <div style={{fontSize:9,color:"#444",marginBottom:20,letterSpacing:1}}>
@@ -2657,15 +2815,15 @@ export default function SchoolMarket() {
                   <button key={e} onClick={()=>setDraft(d=>({...d,emoji:e}))} style={{
                     fontSize:18,background:draft.emoji===e?"#ffdc3215":"transparent",
                     border:draft.emoji===e?"2px solid #ffdc32":"2px solid transparent",
-                    borderRadius:4,padding:4,cursor:"pointer"}}>{e}</button>
+                    borderRadius:10,padding:4,cursor:"pointer"}}>{e}</button>
                 ))}
               </div>
             </Field>
             <Field label="TITRE">
               <textarea value={draft.title} onChange={e=>setDraft(d=>({...d,title:e.target.value}))}
                 placeholder="Ex: Le prof de maths sera absent lundi ?"
-                rows={3} style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",
-                  color:"#e8e0d0",padding:"10px 12px",borderRadius:2,fontSize:12,
+                rows={3} style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",
+                  color:"#e8e0d0",padding:"10px 12px",borderRadius:6,fontSize:12,
                   fontFamily:"inherit",outline:"none",resize:"none",boxSizing:"border-box"}}/>
             </Field>
             <Field label="CATÉGORIE">
@@ -2675,20 +2833,20 @@ export default function SchoolMarket() {
                     background:draft.category===cat?`${CAT_COLOR[cat]}20`:"transparent",
                     color:draft.category===cat?CAT_COLOR[cat]:"#444",
                     border:draft.category===cat?`1px solid ${CAT_COLOR[cat]}50`:"1px solid #252525",
-                    padding:"5px 10px",borderRadius:2,cursor:"pointer",fontSize:9,
+                    padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:9,
                     fontWeight:"bold",fontFamily:"inherit",letterSpacing:1}}>
                     {cat.toUpperCase()}
                   </button>
                 ))}
               </div>
             </Field>
-            {draftErr&&<div style={{color:"#ef4444",fontSize:11,marginBottom:12,padding:"8px 12px",background:"#1a0505",borderRadius:2}}>{draftErr}</div>}
+            {draftErr&&<div style={{color:"#ef4444",fontSize:11,marginBottom:16,padding:"8px 12px",background:"#1a0505",borderRadius:6}}>{draftErr}</div>}
             <Field label="DATE LIMITE DE PARI (optionnel)">
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <input type="datetime-local" value={draft.deadline}
                   onChange={e=>setDraft(d=>({...d,deadline:e.target.value}))}
                   style={{flex:1,background:"#1a1a1a",border:"1px solid #333",color:"#e8e0d0",
-                    padding:"8px 12px",borderRadius:2,fontSize:11,fontFamily:"inherit",outline:"none",
+                    padding:"8px 12px",borderRadius:6,fontSize:11,fontFamily:"inherit",outline:"none",
                     colorScheme:"dark"}}/>
                 {draft.deadline && (
                   <button onClick={()=>setDraft(d=>({...d,deadline:""}))}
@@ -2702,7 +2860,7 @@ export default function SchoolMarket() {
               )}
             </Field>
             <button onClick={createMarket} style={{...S.btn("#ffdc32","#0d0d0d")}}>→ PUBLIER</button>
-            <button onClick={()=>setCreateOpen(false)} style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
+            <button onClick={()=>setCreateOpen(false)} style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #222",fontSize:11})}}>Annuler</button>
           </div>
         </div>
       )}
@@ -2712,10 +2870,10 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.95)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setAnnounceOpen(null)}>
-          <div style={{background:"#111",border:"2px solid #6366f1",borderRadius:4,
-            padding:28,maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto"}}
+          <div style={{background:"#111",border:"2px solid #6366f1",borderRadius:10,
+            padding:32,maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto"}}
             onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:9,color:"#6366f1",letterSpacing:3,marginBottom:8,fontWeight:"bold"}}>
+            <div style={{fontSize:9,color:"#6366f1",letterSpacing:3,marginBottom:16,fontWeight:"bold"}}>
               📢 ANNONCE
             </div>
             <div style={{fontSize:16,fontWeight:"bold",marginBottom:4,color:"#a5b4fc"}}>
@@ -2729,7 +2887,7 @@ export default function SchoolMarket() {
             </div>
             <button onClick={()=>setAnnounceOpen(null)}
               style={{marginTop:20,background:"#6366f1",color:"#fff",border:"none",
-                padding:"8px 20px",borderRadius:2,cursor:"pointer",
+                padding:"8px 20px",borderRadius:6,cursor:"pointer",
                 fontWeight:"bold",fontSize:10,fontFamily:"inherit"}}>
               ✓ Fermer
             </button>
@@ -2742,7 +2900,7 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setResolveModal(null)}>
-          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:4,padding:28,maxWidth:400,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #a855f7",borderRadius:10,padding:32,maxWidth:400,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>Clôturer ce marché</div>
             <div style={{fontSize:13,color:"#888",marginBottom:20,fontStyle:"italic"}}>« {resolveModal.title} »</div>
@@ -2754,7 +2912,7 @@ export default function SchoolMarket() {
                 style={{...S.btn("#ef4444","#fff",{flex:1})}}>❌ NON gagne</button>
             </div>
             <button onClick={()=>setResolveModal(null)}
-              style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
+              style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #222",fontSize:11})}}>Annuler</button>
           </div>
         </div>
       )}
@@ -2764,19 +2922,19 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setWalletModal(null)}>
-          <div style={{background:"#111",border:"2px solid #ffdc32",borderRadius:4,padding:28,maxWidth:340,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #ffdc32",borderRadius:10,padding:32,maxWidth:340,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:"bold",marginBottom:4}}>💰 Modifier le wallet</div>
             <div style={{fontSize:12,color:"#888",marginBottom:4}}>{walletModal.pseudo}</div>
             <div style={{fontSize:13,color:"#ffdc32",marginBottom:16}}>Solde actuel : {walletModal.wallet.toLocaleString()} SC</div>
             <input type="number" value={walletAmt} onChange={e=>setWalletAmt(e.target.value)}
               placeholder="Ex: +500 ou -200"
-              style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                padding:"10px 12px",borderRadius:2,fontSize:15,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:12}}/>
+              style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                padding:"10px 12px",borderRadius:6,fontSize:15,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:12}}/>
             <button onClick={()=>adminSetWallet(walletModal.id)}
               style={{...S.btn("#ffdc32","#0d0d0d")}}>✓ APPLIQUER</button>
             <button onClick={()=>setWalletModal(null)}
-              style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
+              style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #222",fontSize:11})}}>Annuler</button>
           </div>
         </div>
       )}
@@ -2786,18 +2944,18 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setRenamModal(null)}>
-          <div style={{background:"#111",border:"2px solid #3b82f6",borderRadius:4,padding:28,maxWidth:340,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #3b82f6",borderRadius:10,padding:32,maxWidth:340,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:"bold",marginBottom:4}}>✏️ Renommer</div>
             <div style={{fontSize:12,color:"#888",marginBottom:16}}>Actuel : <b>{renamModal.pseudo}</b></div>
             <input value={renamInput} onChange={e=>setRenamInput(e.target.value)} placeholder="Nouveau pseudo..."
-              style={{width:"100%",background:"#0d0d0d",border:"1px solid #252525",color:"#e8e0d0",
-                padding:"10px 12px",borderRadius:2,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
+              style={{width:"100%",background:"#0d0d0d",border:"1px solid #2a2a2a",color:"#e8e0d0",
+                padding:"10px 12px",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",marginBottom:8}}/>
             {renamErr&&<div style={{color:"#ef4444",fontSize:11,marginBottom:8}}>{renamErr}</div>}
             <button onClick={()=>adminRename(renamModal.id)}
               style={{...S.btn("#3b82f6","#fff")}}>✓ RENOMMER</button>
             <button onClick={()=>setRenamModal(null)}
-              style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #1a1a1a",fontSize:11})}}>Annuler</button>
+              style={{...S.btn("transparent","#333",{marginTop:8,border:"1px solid #222",fontSize:11})}}>Annuler</button>
           </div>
         </div>
       )}
@@ -2807,16 +2965,16 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setBanConfirm(null)}>
-          <div style={{background:"#111",border:"2px solid #ef4444",borderRadius:4,padding:28,maxWidth:340,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #ef4444",borderRadius:10,padding:32,maxWidth:340,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>
               {banConfirm.banned?"Débannir":"Bannir"} {banConfirm.pseudo} ?
             </div>
             {!banConfirm.banned&&<div style={{fontSize:11,color:"#555",marginBottom:20}}>
               Ses marchés actifs seront supprimés et ses parieurs remboursés.</div>}
-            <div style={{display:"flex",gap:8,marginTop:16}}>
+            <div style={{display:"flex",gap:16,marginTop:16}}>
               <button onClick={()=>setBanConfirm(null)}
-                style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>Annuler</button>
+                style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #2a2a2a"})}}>Annuler</button>
               <button onClick={()=>adminBan(banConfirm.id)}
                 style={{...S.btn(banConfirm.banned?"#10b981":"#ef4444","#fff",{flex:1})}}>
                 {banConfirm.banned?"✅ Débannir":"🚫 Bannir"}
@@ -2831,7 +2989,7 @@ export default function SchoolMarket() {
         <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.92)",
           backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
           onClick={()=>setDelConfirm(null)}>
-          <div style={{background:"#111",border:"2px solid #ef4444",borderRadius:4,padding:28,maxWidth:400,width:"100%"}}
+          <div style={{background:"#111",border:"2px solid #ef4444",borderRadius:10,padding:32,maxWidth:400,width:"100%"}}
             onClick={e=>e.stopPropagation()}>
             {delConfirm.type==="market" ? (
               <>
@@ -2839,14 +2997,14 @@ export default function SchoolMarket() {
                 <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>
                   {delConfirm.market.resolved?"Supprimer ce marché résolu ?":"Supprimer ce marché ?"}
                 </div>
-                <div style={{fontSize:13,color:"#888",marginBottom:8,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
-                <div style={{fontSize:11,color:"#555",marginBottom:22,lineHeight:1.6,padding:"10px 12px",background:"#1a1a1a",borderRadius:2}}>
+                <div style={{fontSize:13,color:"#888",marginBottom:16,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
+                <div style={{fontSize:11,color:"#555",marginBottom:22,lineHeight:1.6,padding:"10px 12px",background:"#1a1a1a",borderRadius:6}}>
                   {delConfirm.market.resolved
                     ? "ℹ️ Ce marché est déjà résolu. Suppression définitive sans remboursement."
                     : `⚠️ Les ${(delConfirm.market.bets||[]).filter(b=>!b.isPenalty).length} paris actifs seront remboursés.`}
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setDelConfirm(null)} style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>← ANNULER</button>
+                  <button onClick={()=>setDelConfirm(null)} style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #2a2a2a"})}}>← ANNULER</button>
                   <button onClick={()=>deleteMarket(delConfirm.market.id)} style={{...S.btn("#ef4444","#fff",{flex:1})}}>🗑 SUPPRIMER</button>
                 </div>
               </>
@@ -2854,13 +3012,13 @@ export default function SchoolMarket() {
               <>
                 <div style={{fontSize:28,marginBottom:10}}>↩</div>
                 <div style={{fontSize:16,fontWeight:"bold",marginBottom:8}}>Retirer ton pari ?</div>
-                <div style={{fontSize:13,color:"#888",marginBottom:12,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
+                <div style={{fontSize:13,color:"#888",marginBottom:16,fontStyle:"italic"}}>« {delConfirm.market.title} »</div>
                 {(()=>{
                   const b=(delConfirm.market.bets||[]).find(x=>x.userId===me?.id);
                   const penalty = b ? Math.floor(b.amount*0.5) : 0;
                   const refund  = b ? b.amount - penalty : 0;
                   return (
-                    <div style={{marginBottom:22,padding:"12px 14px",background:"#1a1a1a",borderRadius:2,border:"1px solid #252525",lineHeight:2}}>
+                    <div style={{marginBottom:22,padding:"12px 14px",background:"#1a1a1a",borderRadius:6,border:"1px solid #2a2a2a",lineHeight:2}}>
                       <div style={{fontSize:11,color:"#555"}}>Mise initiale : <span style={{color:"#e8e0d0",fontWeight:"bold"}}>{b?.amount} SC</span></div>
                       <div style={{fontSize:11,color:"#10b981"}}>✅ Remboursé : <span style={{fontWeight:"bold"}}>{refund} SC</span></div>
                       <div style={{fontSize:11,color:"#ef4444"}}>🔥 Pénalité (50%) : <span style={{fontWeight:"bold"}}>−{penalty} SC → cagnotte</span></div>
@@ -2869,7 +3027,7 @@ export default function SchoolMarket() {
                   );
                 })()}
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setDelConfirm(null)} style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #252525"})}}>← GARDER</button>
+                  <button onClick={()=>setDelConfirm(null)} style={{...S.btn("transparent","#555",{flex:1,border:"1px solid #2a2a2a"})}}>← GARDER</button>
                   <button onClick={()=>deleteBet(delConfirm.market.id)} style={{...S.btn("#ef4444","#fff",{flex:1})}}>↩ RETIRER (−50%)</button>
                 </div>
               </>
