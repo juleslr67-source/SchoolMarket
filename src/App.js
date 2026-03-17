@@ -130,12 +130,66 @@ const PwField = ({ value, onChange, placeholder }) => {
   );
 };
 
+const S = {const THEME = {
+  bg: "#FFFFFF",
+  bgSecondary: "#F8FAFC", // Gris bleuté très léger
+  border: "#E2E8F0",
+  text: "#0F172A",
+  textLight: "#64748B",
+  primary: "#2563EB", 
+  yesBg: "#DCFCE7",
+  yesText: "#15803D",
+  noBg: "#FEE2E2",
+  noText: "#B91C1C"
+};
+
 const S = {
-  btn:(bg,color,extra={})=>({
-    width:"100%",padding:"11px",borderRadius:2,border:"none",cursor:"pointer",
-    fontWeight:"bold",fontSize:11,fontFamily:"'Courier New',monospace",letterSpacing:1,
-    background:bg,color,marginTop:4,...extra
-  })
+  // Le conteneur principal (à appliquer sur la div parente)
+  app: {
+    backgroundColor: THEME.bgSecondary,
+    color: THEME.text,
+    fontFamily: "'Inter', -apple-system, sans-serif",
+    minHeight: "100vh",
+    paddingBottom: "80px" // Pour ne pas cacher le contenu derrière la barre mobile
+  },
+  // Style des cartes de paris
+  card: {
+    background: THEME.bg,
+    borderRadius: "16px",
+    border: `1px solid ${THEME.border}`,
+    padding: "20px",
+    marginBottom: "16px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+  },
+  // Boutons style "Pill"
+  btn: (bg, color, extra = {}) => ({
+    width: "100%",
+    padding: "12px",
+    borderRadius: "12px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "14px",
+    background: bg,
+    color: color,
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    ...extra
+  }),
+  // Inputs clairs
+  input: {
+    width: "100%",
+    background: "#FFF",
+    border: `1px solid ${THEME.border}`,
+    color: THEME.text,
+    padding: "12px",
+    borderRadius: "10px",
+    fontSize: "15px",
+    outline: "none",
+    boxSizing: "border-box"
+  }
 };
 
 export default function SchoolMarket() {
